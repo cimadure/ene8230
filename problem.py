@@ -49,8 +49,8 @@ params = {
 }
 
 mdl = ModelShaving('V2B', params=params)
-mdl.problem_variables();
-mdl.problem_constrainsts();
+mdl.problem_variables()
+mdl.problem_constraints()
 
 # mdl.add_kpi(mdl.max(mdl.v), "Max Pch(t)");
 
@@ -61,5 +61,5 @@ print("Obj", mdl.solution.get_objective_value())
 print("--------------------------------------------")
 print(mdl.print_solution(print_zeros=False))
 print(solus)
-print(mdl.describe_objectives())
+#print(mdl.describe_objectives())
 print('end')
