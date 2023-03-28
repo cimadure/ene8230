@@ -76,12 +76,15 @@ class ModelShaving(Model):
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_Pch_range(self):
-        [self.add_range(lb=self.params['Pch_min'], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n])
+        [self.add_range(lb=self.params['Pch_min'], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n-1])
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
+        #[self.add_constraint(self.params['Pch_min'] <= self.Pch__n_i_t[n, i, t])
+        # for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
+#    , ub = self.params['Pch_max_n'][n]
 
     def problem_constraint_Pdis_range(self):
-        [self.add_range(lb=self.params['Pch_min'], expr=self.Pdis__n_i_t[n, i, t], ub=self.params['Pdis_max_n'][n])
+        [self.add_range(lb=self.params['Pch_min'], expr=self.Pdis__n_i_t[n, i, t], ub=self.params['Pdis_max_n'][n-1])
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_power_aggration__t(s_i, delta_i, r__ut_i, p__n_i, r__n_i):
@@ -105,6 +108,8 @@ class ModelShaving(Model):
     def problem_constraints(self):
         self.problem_constraint_prevent_simultaneous_charge_and_discharge()
         self.problem_constraint_SOC_range()
+        self.problem_constraint_Pch_range()
+        self.problem_constraint_Pdis_range()
 
 # [self.add_range(lb=self.params['SOCmin'], expr='SOC__{n}{i}'.format(n=n,i=i), ub=self.params['SOCmax']) for n in self.ens['N'] for i in self.ens['I']]
 # [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n,i], ub=self.params['SOCmax']) for n in self.ens['N'] for i in self.ens['I']];
