@@ -31,6 +31,8 @@ Si = np.random.randint(0, 2, size=(l, 1))
 
 print('Set problem parameters')
 
+# Prius 4.4kWh, Leaf 24kWh
+
 params = {
     # Variables	Descriptions	Unités
     'SOCmin': 20.0,  # État de charge minimum des véhicules électriques	kWh
@@ -42,7 +44,7 @@ params = {
     'Pch_max_n': [50.0],  # Puissance de charge maximum en utilisant les bornes de type n	kW
     'Pdis_max_n': [40.0],  # Puissance de décharge maximum en utilisant les bornes de type n	kW
 
-    'beta_ch': 0.90,  # Efficacité de charge	%
+    'beta_ch': 0.93,  # Efficacité de charge	%
     'beta_dis': 0.90,  # Efficacité de décharge	%
     'NEVs': 1000.0,  # Nombre de véhicules électriques	Qté
     #'Rut': [0.21, 0.22, 0.23, 0.34],  # Ratio d’utilisateurs avec le profil i	%
