@@ -68,12 +68,21 @@ class ModelShaving(Model):
         self.Rborne__n_i = self.binary_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
 
         self.Pch_tot__t = self.continuous_var_matrix(1, self.ens['T'], lb=0,
-                                                    ub=self.params['MAX_OPTIM'], name='Pch_tot_')
+                                                     ub=self.params['MAX_OPTIM'], name='Pch_tot_')
 
+        self.Pch__i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
+                                                   ub=self.params['MAX_OPTIM'], name='Pch__i_t_')
+
+        self.Pdis__i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
+                                                    ub=self.params['MAX_OPTIM'], name='Pdis__i_t_')
 
     def problem_constraint_prevent_simultaneous_charge_and_discharge(self):
         [self.add_constraint(self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t] <= 1.0)
          for i in self.ens['I'] for t in self.ens['T']]
+
+    def problem_constraint_prevent_simultaneous_power_charge_and_discharge(self):
+        [self.add_constraint(self.Pch__n_i_t[n, i, t] + self.Pdis__n_i_t[n, i, t] == 0.0)
+         for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_SOC_range(self):
         [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n, i, t], ub=self.params['SOCmax'])
@@ -137,25 +146,41 @@ class ModelShaving(Model):
         pass
 
     def problem_constraint_Pch__n_i_t(self):
-        pass
+        [self.add_constraint( self.Pch__n_i_t[n, i, t] ==
+                             self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
+                              * self.params['Si'][t, i - 1]
+                              * self.delta_ch__i_t[i, t]
+                              * self.params['Pb'][t]
+                             )
+                             for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']
+         ]
 
     def problem_constraint_Pdis__n_i_t(self):
-        pass
+        [self.add_constraint( self.Pdis__n_i_t[n, i, t] ==
+                             self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
+                              * self.params['Si'][t, i - 1]
+                              * self.delta_dis__i_t[i, t]
+                              * self.params['Pb'][t]
+                             ) for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']
+         ]
 
     def problem_constraint_SOC__n_i_t(self):
         [self.add_constraint(self.SOC__n_i_t[n, i, t+1] ==
                              self.SOC__n_i_t[n, i, t]
                              + self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t']
                              - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
-                             )for n in self.ens['N'] for i in self.ens['I'] for t in range(0, self.ens['instant']-1)]
+                             ) for n in self.ens['N'] for i in self.ens['I'] for t in range(0, self.ens['instant']-1)]
 
     def problem_constraints(self):
         self.problem_constraint_prevent_simultaneous_charge_and_discharge()
+        self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
         self.problem_constraint_SOC_range()
         self.problem_constraint_Pch_range()
         self.problem_constraint_Pdis_range()
         #self.problem_constraint_Pch_total__t()
         self.problem_constraint_SOC__n_i_t()
+        self.problem_constraint_Pch__n_i_t()
+        self.problem_constraint_Pdis__n_i_t()
 
 # [self.add_range(lb=self.params['SOCmin'], expr='SOC__{n}{i}'.format(n=n,i=i), ub=self.params['SOCmax']) for n in self.ens['N'] for i in self.ens['I']]
 # [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n,i], ub=self.params['SOCmax']) for n in self.ens['N'] for i in self.ens['I']];

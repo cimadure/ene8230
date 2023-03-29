@@ -59,21 +59,32 @@ params = {
 
 }
 
-mdl = ModelShaving('V2B', params=params)
-mdl.problem_variables()
-print(mdl.Pch_tot__t)
-print(mdl.Pch__n_i_t)
-mdl.problem_constraints()
 
-# mdl.add_kpi(mdl.max(mdl.v), "Max Pch(t)");
+def main(args):
 
-print(mdl.print_information())
+    mdl = ModelShaving('V2B', params=params)
+    mdl.problem_variables()
+    #print(mdl.Pch_tot__t)
+    print(mdl.Pch__n_i_t)
+    mdl.problem_constraints()
 
-solus = mdl.solve()
-print("Obj", mdl.solution.get_objective_value())
-print("--------------------------------------------")
-#print(vars(mdl))
-#print(mdl.print_solution(print_zeros=False))
-#print(solus)
-#print(mdl.describe_objectives())
-print('end')
+    # mdl.add_kpi(mdl.max(mdl.v), "Max Pch(t)");
+    print('\n')
+    print(mdl.print_information())
+
+    solus = mdl.solve()
+    if solus:
+        print("Obj", mdl.solution.get_objective_value())
+    print("--------------------------------------------")
+    # print(vars(mdl))
+    # print(mdl.print_solution(print_zeros=False))
+    # print(solus)
+    # print(mdl.describe_objectives())
+    print('end')
+    return 0
+
+
+if __name__ == '__main__':
+    import sys
+    sys.exit(main(sys.argv))
+
