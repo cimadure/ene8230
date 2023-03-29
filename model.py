@@ -171,16 +171,33 @@ class ModelShaving(Model):
                              - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
                              ) for n in self.ens['N'] for i in self.ens['I'] for t in range(0, self.ens['instant']-1)]
 
+    def problem_constraint_Pch__i_t(self):
+        [self.add_constraint( self.Pch__i_t[i, t] == self.sum(self.Pch__n_i_t[n, i, t] for n in self.ens['N']))
+                              for i in self.ens['I'] for t in self.ens['T']
+          ]
+
+
+    def problem_constraint_Pdis__i_t(self):
+        [self.add_constraint( self.Pdis__i_t[i, t] == self.sum(self.Pdis__n_i_t[n, i, t] for n in self.ens['N']))
+                              for i in self.ens['I'] for t in self.ens['T']
+          ]
+
     def problem_constraints(self):
         self.problem_constraint_prevent_simultaneous_charge_and_discharge()
         self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
+
         self.problem_constraint_SOC_range()
         self.problem_constraint_Pch_range()
         self.problem_constraint_Pdis_range()
-        #self.problem_constraint_Pch_total__t()
+
         self.problem_constraint_SOC__n_i_t()
         self.problem_constraint_Pch__n_i_t()
         self.problem_constraint_Pdis__n_i_t()
+
+        self.problem_constraint_Pch__i_t()
+        self.problem_constraint_Pdis__i_t()
+
+        #self.problem_constraint_Pch_total__t()
 
 # [self.add_range(lb=self.params['SOCmin'], expr='SOC__{n}{i}'.format(n=n,i=i), ub=self.params['SOCmax']) for n in self.ens['N'] for i in self.ens['I']]
 # [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n,i], ub=self.params['SOCmax']) for n in self.ens['N'] for i in self.ens['I']];
