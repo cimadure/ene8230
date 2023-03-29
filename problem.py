@@ -68,6 +68,9 @@ def main(args):
     #print(mdl.Pdis_tot__t)
     mdl.problem_constraints()
 
+    mdl.minimize( mdl.problem_cout_depassement() )
+
+
     # mdl.add_kpi(mdl.max(mdl.v), "Max Pch(t)");
     print('\n')
     print(mdl.print_information())

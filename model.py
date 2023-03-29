@@ -165,6 +165,13 @@ class ModelShaving(Model):
                             for t in self.ens['T']
           ]
 
+
+    def problem_cout_depassement(self):
+        c = 1.0 #next: cout = [summer, winter]
+        return self.params['delta_t'] * sum(c * self.Pr__t[t]  for t in  self.ens['T'])
+
+
+
     def problem_constraints(self):
         self.problem_constraint_prevent_simultaneous_charge_and_discharge()
         self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
