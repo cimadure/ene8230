@@ -101,26 +101,28 @@ class ModelShaving(Model):
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_Pch__n_i_t(self):
+        # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
         [self.add_constraint( self.Pch__n_i_t[n, i, t] ==
                              self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
                               * self.params['Si'][t, i - 1]
-                              * self.delta_ch__i_t[i, t]
+                              #* self.delta_ch__i_t[i, t]
                               * self.params['Pb'][t]
                              )
                              for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']
          ]
 
     def problem_constraint_Pdis__n_i_t(self):
+        # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
         [self.add_constraint( self.Pdis__n_i_t[n, i, t] ==
                              self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
                               * self.params['Si'][t, i - 1]
-                              * self.delta_dis__i_t[i, t]
+                              #* self.delta_dis__i_t[i, t]
                               * self.params['Pb'][t]
                              ) for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']
          ]
 
     def problem_constraint_SOC__n_i_t(self):
-        # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] *
+        # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
         [self.add_constraint(self.SOC__n_i_t[n, i, t+1] ==
                              self.SOC__n_i_t[n, i, t]
                              + self.params['beta_ch'] *  self.Pch__n_i_t[n, i, t] * self.params['delta_t']
@@ -168,7 +170,7 @@ class ModelShaving(Model):
 
     def problem_cout_depassement(self):
         c = 1.0 #next: cout = [summer, winter]
-        return self.params['delta_t'] * sum(c * self.Pr__t[t]  for t in  self.ens['T'])
+        return self.params['delta_t'] * sum(c * self.Pr__t[t] for t in  self.ens['T'])
 
 
 

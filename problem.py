@@ -18,7 +18,7 @@ print(year)
 an = df[df['year'] == year[0]]
 Pb = an['Power Clipped [kW]'].to_numpy(copy=True)
 
-Pb = Pb[:11]
+Pb = Pb[:70]
 
 print(Pb.shape)
 # print(df.info)
@@ -74,15 +74,15 @@ def main(args):
     # mdl.add_kpi(mdl.max(mdl.v), "Max Pch(t)");
     print('\n')
     print(mdl.print_information())
-
     solus = mdl.solve()
     if solus:
         print("Obj", mdl.solution.get_objective_value())
+        print(vars(mdl))
+        print(mdl.print_solution(print_zeros=False))
+        print(solus)
+        print(mdl.describe_objectives())
     print("--------------------------------------------")
-    # print(vars(mdl))
-    # print(mdl.print_solution(print_zeros=False))
-    # print(solus)
-    # print(mdl.describe_objectives())
+
     print('end')
     return 0
 
