@@ -65,7 +65,7 @@ def main(args):
     mdl = ModelShaving('V2B', params=params)
     mdl.problem_variables()
     #print(mdl.Pch_tot__t)
-    print(mdl.Pch__n_i_t)
+    #print(mdl.Pdis_tot__t)
     mdl.problem_constraints()
 
     # mdl.add_kpi(mdl.max(mdl.v), "Max Pch(t)");
