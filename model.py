@@ -172,6 +172,23 @@ class ModelShaving(Model):
         c = 1.0 #next: cout = [summer, winter]
         return self.params['delta_t'] * sum(c * self.Pr__t[t] for t in  self.ens['T'])
 
+    def problem_constraint_unit_commitment(self):
+        # TODO
+        PU = self.params['SOCmin'] / self.params['delta_t']
+        PD = self.params['SOCmax'] / self.params['delta_t']
+        C = [1.0, 1.0, 1.0, 1.0]
+        W = 1
+        x = self.Pch__n_i_t
+        s = self.params['Si'][i]
+        y = self.Pch__n_i_t
+
+        for i in range(I):
+            model.add_constraints([x[i, j] <= y[i, j] * C[i, 0] for j in range(J)])
+            model.add_constraint(s[i, 0] == y[i, 0])
+            model.add_constraints([s[i, j] >= y[i, j] - y[i, j - 1] for j in range(1, J)])
+            model.add_constraints([x[i, j] - x[i, j - 1] <= PU for j in range(1, J)])
+            model.add_constraints([x[i, j - 1] - x[i, j] <= PD for j in range(1, J)])
+            model.add_constraints([model.sum(s[i, j - min((j + 1, W)) + 1:j + 1]) <= y[i, j] for j in range(J)])
 
 
     def problem_constraints(self):
@@ -193,3 +210,4 @@ class ModelShaving(Model):
         self.problem_constraint_Pdis_total__t()
         self.problem_constraint_Pr__t()
 
+        #self.problem_constraint_unit_commitment()
