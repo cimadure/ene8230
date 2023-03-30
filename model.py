@@ -68,6 +68,14 @@ class ModelShaving(Model):
         self.Pdis__i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
                                                     ub=self.params['MAX_OPTIM'], name='Pdis__i_t_')
 
+
+        self.Pch_demand_i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
+                                                   ub=self.params['MAX_OPTIM'], name='Pch_demand_i_t_')
+
+        self.Pdis_demand_i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
+                                                    ub=self.params['MAX_OPTIM'], name='Pdis_demand_i_t_')
+
+
         self.Pch_tot__t = self.continuous_var_list(keys=self.ens['T'], lb=0,
                                                      ub=self.params['MAX_OPTIM'], name='Pch_tot_')
 
@@ -80,8 +88,9 @@ class ModelShaving(Model):
         [self.add_constraint(self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t] <= 1.0)
          for i in self.ens['I'] for t in self.ens['T']]
 
+
     def problem_constraint_prevent_simultaneous_power_charge_and_discharge(self):
-        [self.add_constraint(self.Pch__n_i_t[n, i, t] + self.Pdis__n_i_t[n, i, t] == 0.0)
+        [self.add_constraint(self.Pch__n_i_t[n, i, t] * self.Pdis__n_i_t[n, i, t] == 0.0)
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_SOC_range(self):
@@ -102,10 +111,11 @@ class ModelShaving(Model):
 
     def problem_constraint_Pch__n_i_t(self):
         # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
-        [self.add_constraint( self.Pch__n_i_t[n, i, t] ==
+        [self.add_constraint(self.Pch__n_i_t[n, i, t]
+                             ==
                              self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
                               * self.params['Si'][t, i - 1]
-                              #* self.delta_ch__i_t[i, t]
+                              #* self.delta_ch__i_t[i, 1]
                               * self.params['Pb'][t]
                              )
                              for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']
@@ -113,7 +123,8 @@ class ModelShaving(Model):
 
     def problem_constraint_Pdis__n_i_t(self):
         # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
-        [self.add_constraint( self.Pdis__n_i_t[n, i, t] ==
+        [self.add_constraint( self.Pdis__n_i_t[n, i, t]
+                              ==
                              self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
                               * self.params['Si'][t, i - 1]
                               #* self.delta_dis__i_t[i, t]
@@ -167,7 +178,10 @@ class ModelShaving(Model):
                             for t in self.ens['T']
           ]
 
-
+#    def problem_constraint_chrge_discharge__t(self):
+#        [self.add_constraint(0 ==  self.Pch_tot__t[t] * self.Pdis_tot__t[t] )
+#                            for t in self.ens['T']
+#          ]
     def problem_cout_depassement(self):
         c = 1.0 #next: cout = [summer, winter]
         return self.params['delta_t'] * sum(c * self.Pr__t[t] for t in  self.ens['T'])
@@ -193,7 +207,7 @@ class ModelShaving(Model):
 
     def problem_constraints(self):
         self.problem_constraint_prevent_simultaneous_charge_and_discharge()
-        self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
+        #self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
 
         self.problem_constraint_SOC_range()
         self.problem_constraint_Pch_range()
@@ -209,5 +223,6 @@ class ModelShaving(Model):
         self.problem_constraint_Pch_total__t()
         self.problem_constraint_Pdis_total__t()
         self.problem_constraint_Pr__t()
+        #self.problem_constraint_chrge_discharge__t()
 
         #self.problem_constraint_unit_commitment()
