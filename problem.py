@@ -7,6 +7,10 @@ import sys
 
 # import cplex
 
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
+
 print('Load')
 
 print('Load Pb and other data')
@@ -19,8 +23,8 @@ print(year)
 an = df[df['year'] == year[0]]
 Pb = an['Power Clipped [kW]'].to_numpy(copy=True)
 
-Pb = Pb[30:40] # 40
-idx = an.index[30:40]
+Pb = Pb[0:40]# 40
+idx = an.index[0:40]
 
 print(Pb.shape)
 
@@ -82,14 +86,14 @@ def main(args):
     mdl.add_kpi(mdl.min(mdl.problem_cout_depassement()), "Min Cout dépassement")
 
     print('\n')
-    print(mdl.print_information())
+    mdl.print_information()
     solus = mdl.solve()
     assert solus, "!!! Solve of the model fails"
     print("********************************************")
     print("Obj", mdl.solution.get_objective_value())
-    print(mdl.print_solution(print_zeros=False))
+    mdl.print_solution(print_zeros=False)
     print("--------------------------------------------")
-    print(mdl.report())
+    mdl.report()
     print("--------------------------------------------")
     print('end')
     with open('solution.pickle', mode='wb') as f:
@@ -108,9 +112,18 @@ def main(args):
                        'Si group 4': mdl.params['Si'][:, 3]}
                       ).set_index(idx)
 
-    print(dk)
+    #print(dk)
+
+    #print(solus.describe_objectives())
+
+    var_dict = mdl.Pch_demand_i_t
+    piv = mdl.var_dict_as_df(solution=solus, var_dict=var_dict, index='t', columns='i')
+    print(piv)
 
     return 0
+
+
+
 
     # #numrows = mdl.linear_constraints.get_num()
     # #numcols = mdl.variables.get_num()

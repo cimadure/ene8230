@@ -38,6 +38,21 @@ class ModelShaving(Model):
 
         super(ModelShaving, self).__init__(*args, **kwargs)
 
+    @staticmethod
+    def var_dict_as_df(solution, var_dict, index, columns, index_first=False):
+        key_column_names = list()
+
+        if index_first:
+            key_column_names = list(index)
+            key_column_names.append(columns)
+        else:
+            key_column_names = list(columns)
+            key_column_names.append(index)
+
+        # print(key_column_names)
+        vals = solution.get_value_df(var_dict, value_column_name='value', key_column_names=key_column_names)
+        return vals.pivot(index=index, columns=columns, values='value')
+
     def problem_variables(self):
         """
         SOCi(t)	État de charge de la flotte des véhicules électriques à l’instant t	kWh
