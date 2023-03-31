@@ -116,9 +116,21 @@ def main(args):
 
     #print(solus.describe_objectives())
 
-    var_dict = mdl.Pch_demand_i_t
-    piv = mdl.var_dict_as_df(solution=solus, var_dict=var_dict, index='t', columns='i')
-    print(piv)
+    df_Pch__i_t = mdl.var_dict_as_df(solution=solus, var_dict=mdl.Pch_demand_i_t,
+                                     index='t', columns='i', prefix='Pch__i_t__')
+    print(df_Pch__i_t)
+    df_Pdis__i_t = mdl.var_dict_as_df(solution=solus, var_dict=mdl.Pch_demand_i_t,
+                                     index='t', columns='i', prefix='Pdis__i_t__')
+    print(df_Pdis__i_t)
+
+    df_Rborne__n_i = mdl.var_dict_as_df(solution=solus, var_dict=mdl.Rborne__n_i,
+                                     index='i', columns='n', prefix='Rborne__n_i__')
+    print(df_Rborne__n_i)
+
+    df_SOC__n_i_t = mdl.var_dict_as_df(solution=solus, var_dict=mdl.SOC__n_i_t,
+                                     index='t', columns=['n', 'i'])
+    print(df_SOC__n_i_t)
+
 
     return 0
 

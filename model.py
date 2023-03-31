@@ -39,7 +39,7 @@ class ModelShaving(Model):
         super(ModelShaving, self).__init__(*args, **kwargs)
 
     @staticmethod
-    def var_dict_as_df(solution, var_dict, index, columns, index_first=False):
+    def var_dict_as_df(solution, var_dict, index, columns, index_first=False, prefix=None):
         key_column_names = list()
 
         if index_first:
@@ -51,7 +51,8 @@ class ModelShaving(Model):
 
         # print(key_column_names)
         vals = solution.get_value_df(var_dict, value_column_name='value', key_column_names=key_column_names)
-        return vals.pivot(index=index, columns=columns, values='value')
+        piv = vals.pivot(index=index, columns=columns, values='value')
+        return piv.add_prefix(prefix) if prefix else piv
 
     def problem_variables(self):
         """
