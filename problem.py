@@ -25,7 +25,6 @@ Pb = an['Power Clipped [kW]'].to_numpy(copy=True)
 
 Pb = Pb[0:40]# 40
 idx = an.index[0:40]
-
 print(Pb.shape)
 
 # print(df.info)
@@ -77,12 +76,8 @@ def main(args):
     # more: https://ibmdecisionoptimization.github.io/docplex-doc/mp/docplex.mp.solution.html#docplex.mp.solution.SolveSolution
     mdl = ModelShaving('V2B', params=params)
     mdl.problem_variables()
-    #print(mdl.Pch_tot__t)
-    #print(mdl.Pdis_tot__t)
     mdl.problem_constraints()
-
     mdl.minimize(mdl.problem_cout_depassement())
-
     mdl.add_kpi(mdl.min(mdl.problem_cout_depassement()), "Min Cout dépassement")
 
     print('\n')
@@ -114,8 +109,6 @@ def main(args):
 
     #print(dk)
 
-    #print(solus.describe_objectives())
-
     df_Pch__i_t = mdl.var_dict_as_df(solution=solus, var_dict=mdl.Pch_demand_i_t,
                                      index='t', columns='i', prefix='Pch__i_t__')
     print(df_Pch__i_t)
@@ -124,13 +117,13 @@ def main(args):
     print(df_Pdis__i_t)
 
     df_Rborne__n_i = mdl.var_dict_as_df(solution=solus, var_dict=mdl.Rborne__n_i,
-                                     index='i', columns='n', prefix='Rborne__n_i__')
+                                     index='i', columns='n')
     print(df_Rborne__n_i)
 
-    df_SOC__n_i_t = mdl.var_dict_as_df(solution=solus, var_dict=mdl.SOC__n_i_t,
-                                     index='t', columns=['n', 'i'])
+    df_SOC__n_i_t = mdl.var_dict_as_df(solution=solus, var_dict=mdl.SOC__n_i_t, index='t', columns=['n', 'i'])
+    #df_SOC__n_i_t.rename(mapper=lambda x: f'N_{x}', axis='columns', level=0, inplace=True)
+    #df_SOC__n_i_t.rename(mapper=lambda x: f'I_{x}', axis='columns', level=1, inplace=True)
     print(df_SOC__n_i_t)
-
 
     return 0
 

@@ -101,20 +101,20 @@ class ModelShaving(Model):
         self.Pr__t = self.continuous_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='Pr_')
 
     def problem_constraint_prevent_simultaneous_charge_and_discharge(self):
-        [self.add_constraint(self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t] <= 1.0)
+        return [self.add_constraint(self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t] <= 1.0)
          for i in self.ens['I'] for t in self.ens['T']]
 
 
     def problem_constraint_prevent_simultaneous_power_charge_and_discharge(self):
-        [self.add_constraint(self.Pch__n_i_t[n, i, t] * self.Pdis__n_i_t[n, i, t] == 0.0)
+        return [self.add_constraint(self.Pch__n_i_t[n, i, t] * self.Pdis__n_i_t[n, i, t] == 0.0)
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_SOC_range(self):
-        [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n, i, t], ub=self.params['SOCmax'])
+        return [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n, i, t], ub=self.params['SOCmax'])
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_Pch_range(self):
-        [self.add_range(lb=self.params['Pch_min'], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n-1])
+        return [self.add_range(lb=self.params['Pch_min'], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n-1])
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
         #[self.add_constraint(self.params['Pch_min'] <= self.Pch__n_i_t[n, i, t])
         # for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
@@ -122,12 +122,12 @@ class ModelShaving(Model):
 #    , ub = self.params['Pch_max_n'][n]
 
     def problem_constraint_Pdis_range(self):
-        [self.add_range(lb=self.params['Pch_min'], expr=self.Pdis__n_i_t[n, i, t], ub=self.params['Pdis_max_n'][n-1])
+        return [self.add_range(lb=self.params['Pch_min'], expr=self.Pdis__n_i_t[n, i, t], ub=self.params['Pdis_max_n'][n-1])
          for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_Pch__n_i_t(self):
         # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
-        [self.add_constraint(self.Pch__n_i_t[n, i, t]
+        return [self.add_constraint(self.Pch__n_i_t[n, i, t]
                              ==
                              self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
                               * self.params['Si'][t, i - 1]
@@ -139,7 +139,7 @@ class ModelShaving(Model):
 
     def problem_constraint_Pdis__n_i_t(self):
         # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
-        [self.add_constraint( self.Pdis__n_i_t[n, i, t]
+        return [self.add_constraint( self.Pdis__n_i_t[n, i, t]
                               ==
                              self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
                               * self.params['Si'][t, i - 1]
@@ -150,20 +150,20 @@ class ModelShaving(Model):
 
     def problem_constraint_SOC__n_i_t(self):
         # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
-        [self.add_constraint(self.SOC__n_i_t[n, i, t+1] ==
+        return [self.add_constraint(self.SOC__n_i_t[n, i, t+1] ==
                              self.SOC__n_i_t[n, i, t]
                              + self.params['beta_ch'] *  self.Pch__n_i_t[n, i, t] * self.params['delta_t']
                              - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
                              ) for n in self.ens['N'] for i in self.ens['I'] for t in range(0, self.ens['instant']-1)]
 
     def problem_constraint_Pch__i_t(self):
-        [self.add_constraint( self.Pch__i_t[i, t] == self.sum(self.Pch__n_i_t[n, i, t] for n in self.ens['N']))
+        return [self.add_constraint( self.Pch__i_t[i, t] == self.sum(self.Pch__n_i_t[n, i, t] for n in self.ens['N']))
                               for i in self.ens['I'] for t in self.ens['T']
           ]
 
 
     def problem_constraint_Pdis__i_t(self):
-        [self.add_constraint( self.Pdis__i_t[i, t] == self.sum(self.Pdis__n_i_t[n, i, t] for n in self.ens['N']))
+        return [self.add_constraint( self.Pdis__i_t[i, t] == self.sum(self.Pdis__n_i_t[n, i, t] for n in self.ens['N']))
                               for i in self.ens['I'] for t in self.ens['T']
           ]
 
@@ -178,19 +178,19 @@ class ModelShaving(Model):
 
 
     def problem_constraint_Pch_total__t(self):
-        [self.add_constraint( self.Pch_tot__t[t] == self.sum(self.Pch__i_t[i, t] for i in self.ens['I']))
+        return [self.add_constraint( self.Pch_tot__t[t] == self.sum(self.Pch__i_t[i, t] for i in self.ens['I']))
                             for t in self.ens['T']
           ]
 
 
     def problem_constraint_Pdis_total__t(self):
-        [self.add_constraint( self.Pdis_tot__t[t] == self.sum(self.Pdis__i_t[i, t] for i in self.ens['I']))
+        return [self.add_constraint( self.Pdis_tot__t[t] == self.sum(self.Pdis__i_t[i, t] for i in self.ens['I']))
                             for t in self.ens['T']
           ]
 
 
     def problem_constraint_Pr__t(self):
-        [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t] + self.Pdis_tot__t[t] )
+        return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t] + self.Pdis_tot__t[t] )
                             for t in self.ens['T']
           ]
 
@@ -238,7 +238,7 @@ class ModelShaving(Model):
 
         self.problem_constraint_Pch_total__t()
         self.problem_constraint_Pdis_total__t()
-        self.problem_constraint_Pr__t()
+        self.ctr_Pr__t = self.problem_constraint_Pr__t()
         #self.problem_constraint_chrge_discharge__t()
 
         #self.problem_constraint_unit_commitment()
