@@ -36,6 +36,9 @@ class ModelShaving(Model):
             self.ens['T'] = range(0, self.ens['instant'])
             self.ens['M'] = range(1, self.ens['mois'] + 1)
         # print(self.ens)
+        self.cout_energie = None
+        self.cout_puissance = None
+        self.cout_infrastucture = None
 
         super(ModelShaving, self).__init__(*args, **kwargs)
 
@@ -118,7 +121,7 @@ class ModelShaving(Model):
                                                   ub=self.params['MAX_OPTIM'], name='Pr__n_i_t_')  # , key_format=None)
 
         self.delta_ch__t = self.binary_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='delta_ch__t_')
-        self.delta_dis__t = self.binary_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='delta_ch__t_')
+        self.delta_dis__t = self.binary_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='delta_dis__t_')
 
     def problem_constraint_prevent_simultaneous_charge_and_discharge_i_t(self):
         #return [self.add_constraint(self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t] <= 1.0)
@@ -211,6 +214,9 @@ class ModelShaving(Model):
                 for i in self.ens['I'] for t in self.ens['T']
                 ]
 
+
+
+
     def problem_power_aggration__t(self, s_i, delta_i=None, r__ut_i=None, p__n_i=None, r__n_i=None):
         return [self.params['NEVs'] * (
             self.sum(s_i[t, i - 1] * delta_i[i, t] * r__ut_i[i - 1]
@@ -252,7 +258,7 @@ class ModelShaving(Model):
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']
                 ]
 
-    #If at least one the 0
+    #If at least one the 0   ,
     def problem_constraint_delta_ch_and_dis__t(self):
         #[self.add_constraint(self.delta_ch__t[t] == self.sum(self.delta_ch__i_t[i, t] for i in self.ens['I']))
         # for t in self.ens['T']
@@ -263,12 +269,12 @@ class ModelShaving(Model):
         #                            for t in self.ens['T']
         #          ]
 
-    def problem_cout_depassement(self):
+    def problem_cout_energie(self):
         # Min∑_(t=1)^H▒(C_E^ *P_r^  (t)*∆t)
         c = 1.0  # next: cout = [summer, winter]
         return self.params['delta_t'] * sum(c * self.Pr__t[t] for t in self.ens['T'])
 
-    def problem_cout_facture(self):
+    def problem_cout_puissance(self):
         # ∑_(m=1)^12▒(C_P^ *(P_m^max+)
         return sum(self.params['C__P'] for m in self.ens['M'])
 
@@ -277,6 +283,8 @@ class ModelShaving(Model):
         return sum(
             sum(self.params['C__b_n'][n-1, i-1] * self.params['NEVs'] * self.params['Rut'][i-1] * self.Rborne__n_i[n-1, i-1] for n in self.ens['N'])
             for i in self.ens['I'])
+
+
 
 
     def problem_constraint_unit_commitment(self):
@@ -327,10 +335,14 @@ class ModelShaving(Model):
     def problem_constraints(self):
         self.problem_constraint_prevent_simultaneous_charge_and_discharge_i_t()
         #self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
+        #self.problem_constraint_delta_ch_and_dis__t()
 
         self.problem_constraint_SOC_range()
         self.problem_constraint_Pch_range()
         self.problem_constraint_Pdis_range()
+
+        self.problem_constraint_Pr__n_i_t()
+        self.problem_constraint_unit_commitment()
 
         # self.problem_constraint_SOC__n_i_t()
 
@@ -339,14 +351,13 @@ class ModelShaving(Model):
 
         self.problem_constraint_Pch__i_t()
         self.problem_constraint_Pdis__i_t()
+        # contraint_Pr__i_t() ?!?  avec delta_ch_i_t et delta_dis_i_t ?!?
 
         self.problem_constraint_Pch_total__t()
         self.problem_constraint_Pdis_total__t()
-
         self.ctr_Pr__t = self.problem_constraint_Pr__t()
 
-        self.problem_constraint_Pr__n_i_t()
-        self.problem_constraint_unit_commitment()
 
-        #self.problem_constraint_delta_ch_and_dis__t()
+
+
 

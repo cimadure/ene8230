@@ -77,8 +77,8 @@ def main(args):
     mdl = ModelShaving('V2B', params=params)
     mdl.problem_variables()
     mdl.problem_constraints()
-    mdl.minimize(mdl.problem_cout_depassement())
-    mdl.add_kpi(mdl.min(mdl.problem_cout_depassement()), "Min Cout dépassement")
+    mdl.minimize(mdl.problem_cout_energie())
+    mdl.add_kpi(mdl.min(mdl.problem_cout_energie()), "Min Cout dépassement")
 
     print('\n')
     mdl.print_information()
