@@ -120,7 +120,6 @@ class ModelShaving(Model):
         self.delta_ch__t = self.binary_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='delta_ch__t_')
         self.delta_dis__t = self.binary_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='delta_ch__t_')
 
-
     def problem_constraint_prevent_simultaneous_charge_and_discharge_i_t(self):
         #return [self.add_constraint(self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t] <= 1.0)
         #        for i in self.ens['I'] for t in self.ens['T']]
@@ -212,7 +211,6 @@ class ModelShaving(Model):
                 for i in self.ens['I'] for t in self.ens['T']
                 ]
 
-
     def problem_power_aggration__t(self, s_i, delta_i=None, r__ut_i=None, p__n_i=None, r__n_i=None):
         return [self.params['NEVs'] * (
             self.sum(s_i[t, i - 1] * delta_i[i, t] * r__ut_i[i - 1]
@@ -242,7 +240,6 @@ class ModelShaving(Model):
         # WITH delta :  - problem type is: MIQCP
         # Error: Model has non-convex quadratic constraint, index=0
 
-
     def problem_constraint_Pr__n_i_t(self):
         return [self.add_constraint(self.Pr__n_i_t[n, i, t]
                                     ==
@@ -266,10 +263,20 @@ class ModelShaving(Model):
         #                            for t in self.ens['T']
         #          ]
 
-
     def problem_cout_depassement(self):
+        # Min∑_(t=1)^H▒(C_E^ *P_r^  (t)*∆t)
         c = 1.0  # next: cout = [summer, winter]
         return self.params['delta_t'] * sum(c * self.Pr__t[t] for t in self.ens['T'])
+
+    def problem_cout_facture(self):
+        # ∑_(m=1)^12▒(C_P^ *(P_m^max+)
+        return sum(self.params['C__P'] for m in self.ens['M'])
+
+    def problem_cout_infrastructure(self):
+        # ∑_(i=1) ^ I▒(∑_(n=1) ^ 2▒(C_(b, n) * N_EVs * R_(ut, i) * R_(borne, ni)) )
+        return sum(
+            sum(self.params['C__b_n'][n-1, i-1] * self.params['NEVs'] * self.params['Rut'][i-1] * self.Rborne__n_i[n-1, i-1] for n in self.ens['N'])
+            for i in self.ens['I'])
 
 
     def problem_constraint_unit_commitment(self):
@@ -288,7 +295,6 @@ class ModelShaving(Model):
         #3
         # for i in self.ens['I']:
          #    self.add_constraint(self.delta_ch__i_t[i, 0] == y[i - 1, 0])
-
 
         for n in self.ens['N']:
             for i in self.ens['I']:
@@ -318,10 +324,9 @@ class ModelShaving(Model):
                     self.add_constraint(x[n, i, t] - x[n, i, t - 1] <= PU)
                     self.add_constraint(x[n, i, t - 1] - x[n, i, t] <= PD)
 
-
     def problem_constraints(self):
         self.problem_constraint_prevent_simultaneous_charge_and_discharge_i_t()
-        self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
+        #self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
 
         self.problem_constraint_SOC_range()
         self.problem_constraint_Pch_range()
@@ -343,4 +348,5 @@ class ModelShaving(Model):
         self.problem_constraint_Pr__n_i_t()
         self.problem_constraint_unit_commitment()
 
-        self.problem_constraint_delta_ch_and_dis__t()
+        #self.problem_constraint_delta_ch_and_dis__t()
+
