@@ -30,7 +30,7 @@ class ModelShaving(Model):
             self.ens = {"utilsateur": np.shape(self.params['Rut'])[0],  # i
                         "borne": np.shape(self.params['Pch_max_n'])[0],  # n
                         "instant": np.shape(self.params['Pb'])[0],  # t
-                        "mois": 12}  # m
+                        "mois":  np.shape(self.params['Pb_max__m'])[0]}  # m
             self.ens['I'] = range(1, self.ens['utilsateur'] + 1)
             self.ens['N'] = range(1, self.ens['borne'] + 1)
             self.ens['T'] = range(0, self.ens['instant'])
@@ -261,7 +261,7 @@ class ModelShaving(Model):
 
     def problem_cout_puissance(self):
         # ∑_(m=1)^12▒(C_P^ *(P_m^max+)
-        return sum(self.params['C__P'] for m in self.ens['M'])
+        return sum(self.params['C__P'] * self.params['Pb_max__m'][m-1] for m in self.ens['M'])
 
     def problem_cout_infrastructure(self):
         # ∑_(i=1) ^ I▒(∑_(n=1) ^ 2▒(C_(b, n) * N_EVs * R_(ut, i) * R_(borne, ni)) )
