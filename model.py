@@ -138,24 +138,25 @@ class ModelShaving(Model):
         #for i in self.ens['I']:
         #    self.add_constraint(self.delta_ch__i_t[i, 0] == y[i - 1, 0])
         #
-        return [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) == 0)
-                #for n in self.ens['N']
+        [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) <= 1)
                 for i in self.ens['I'] for t in self.ens['T']]
+        [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) >= 0)
+         for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_prevent_simultaneous_power_charge_and_discharge(self):
         return [self.add_constraint(self.Pch_tot__t[t] * self.Pdis_tot__t[t] == 0.0) for t in self.ens['T']]
 
-
+    #validé
     def problem_constraint_SOC_range(self):
         return [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n, i, t], ub=self.params['SOCmax'])
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
-
+    #validé
     def problem_constraint_Pch_range(self):
         return [
             self.add_range(lb=self.params['Pch_min'], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n - 1])
             for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
-
+    #validé
     def problem_constraint_Pdis_range(self):
         return [self.add_range(lb=self.params['Pch_min'], expr=self.Pdis__n_i_t[n, i, t],
                                ub=self.params['Pdis_max_n'][n - 1])
@@ -194,9 +195,9 @@ class ModelShaving(Model):
         # Mod avec Pr__n_i_t
         return [self.add_constraint(self.SOC__n_i_t[n, i, t + 1] ==
                                     self.SOC__n_i_t[n, i, t]
-                                    + self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t']
-                                    - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
-                                    # + self.Pr__n_i_t[n, i, t]
+                                    + self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t'] #* self.delta_ch__i_t[i, t]
+                                    - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t'] #* self.delta_dis__i_t[i, t]
+                                     #+ self.Pr__n_i_t[n, i, t]
                                     ) for n in self.ens['N'] for i in self.ens['I'] for t in
                 range(0, self.ens['instant'] - 1)]
 
@@ -216,20 +217,54 @@ class ModelShaving(Model):
         return [self.params['NEVs'] * (
             self.sum(s_i[t, i - 1] * delta_i[i, t] * r__ut_i[i - 1]
 
-                     * self.sum(p__n_i[n, i, t] * r__n_i[n, i] for n in self.ens['N'])
+                     * self.sum(p__n_i[n, i, t] * r__n_i[n-1, i-1] for n in self.ens['N'])
                      for i in self.ens['I'])
             for t in self.ens['T'])]
 
 
     def problem_constraint_Pch_total__t(self):
-        return [self.add_constraint(self.Pch_tot__t[t] == self.sum(self.Pch__i_t[i, t] for i in self.ens['I']))
-                for t in self.ens['T']
-                ]
+        # return [self.add_constraint(self.Pch_tot__t[t] == self.sum(self.Pch__i_t[i, t] for i in self.ens['I']))
+        #         for t in self.ens['T']
+        #         ]
+        # self.problem_power_aggration__t(
+        s_i=self.params['Si']
+        delta_i=self.delta_ch__i_t,
+        r__ut_i=self.params['Rut'],
+        p__n_i=self.Pch__n_i_t,
+        r__n_i=self.Rborne__n_i
+
+        return [ self.add_constraint( self.Pch_tot__t[t] ==
+            self.params['NEVs'] * self.sum(s_i[t, i - 1] #* self.delta_ch__i_t[i, t]
+                                           * self.params['Rut'][i - 1]
+                                           * self.sum(
+                                                        self.Pch__n_i_t[n, i, t]
+                                                        #self.Pch__i_t[i, t]
+                                                        * r__n_i[n-1, i-1]
+                                for n in self.ens['N'])
+                     for i in self.ens['I']))
+            for t in self.ens['T']]
+
 
     def problem_constraint_Pdis_total__t(self):
-        return [self.add_constraint(self.Pdis_tot__t[t] == self.sum(self.Pdis__i_t[i, t] for i in self.ens['I']))
-                for t in self.ens['T']
-                ]
+        # return [self.add_constraint(self.Pdis_tot__t[t] == self.sum(self.Pdis__i_t[i, t] for i in self.ens['I']))
+        #         for t in self.ens['T']
+        #         ]
+        s_i=self.params['Si']
+        delta_i=self.delta_dis__i_t,
+        r__ut_i=self.params['Rut'],
+        p__n_i=self.Pdis__n_i_t,
+        r__n_i=self.Rborne__n_i
+
+        return [ self.add_constraint( self.Pdis_tot__t[t] ==
+            self.params['NEVs'] * self.sum(s_i[t, i - 1] #* self.delta_dis__i_t[i, t]
+                                           * self.params['Rut'][i - 1]
+                                           * self.sum(
+                                                        self.Pdis__n_i_t[n, i, t]
+                                                        #self.Pdis__i_t[i, t]
+                                                        * r__n_i[n-1, i-1]
+                                for n in self.ens['N'])
+                     for i in self.ens['I']))
+            for t in self.ens['T']]
 
     def problem_constraint_Pr__t(self):
         return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t] - self.Pdis_tot__t[t])
@@ -320,7 +355,7 @@ class ModelShaving(Model):
                 self.add_constraints([self.sum(s[n, i, t - min((t + 1, W)) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
 
     def problem_constraints(self):
-        self.problem_constraint_prevent_simultaneous_charge_and_discharge_i_t()
+        #self.problem_constraint_prevent_simultaneous_charge_and_discharge_i_t()
         #self.problem_constraint_prevent_simultaneous_power_charge_and_discharge()
         #self.problem_constraint_delta_ch_and_dis__t()
 
