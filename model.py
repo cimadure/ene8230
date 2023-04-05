@@ -30,12 +30,13 @@ class ModelShaving(Model):
             self.ens = {"utilsateur": np.shape(self.params['Rut'])[0],  # i
                         "borne": np.shape(self.params['Pch_max_n'])[0],  # n
                         "instant": np.shape(self.params['Pb'])[0],  # t
-                        "mois":  np.shape(self.params['Pb_max__m'])[0]}  # m
+                        "mois":  np.shape(self.params['t_min__m'])[0]}  # m
             self.ens['I'] = range(1, self.ens['utilsateur'] + 1)
             self.ens['N'] = range(1, self.ens['borne'] + 1)
             self.ens['T'] = range(0, self.ens['instant'])
-            self.ens['M'] = range(1, self.ens['mois'] + 1)
-        # print(self.ens)
+            #self.ens['M'] = range(1, self.ens['mois'] + 1)
+            self.ens['M'] = range(0, self.ens['mois'])
+        print(self.ens)
         self.cout_energie = None
         self.cout_puissance = None
         self.cout_infrastucture = None
@@ -122,6 +123,8 @@ class ModelShaving(Model):
 
         self.delta_ch__t = self.binary_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='delta_ch__t_')
         self.delta_dis__t = self.binary_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='delta_dis__t_')
+
+        self.Pr_t_max__m = self.continuous_var( lb=0, ub=self.params['MAX_OPTIM'], name='Pr_t_max__m')
 
     def problem_constraint_prevent_simultaneous_charge_and_discharge_i_t(self):
         # CECI EST UNE NOUVELLE VERSION QUI IMPLIQUE QUE Si[n] soit activé
@@ -236,6 +239,7 @@ class ModelShaving(Model):
         # WITH delta :  - problem type is: MIQCP
         # Error: Model has non-convex quadratic constraint, index=0
 
+
     def problem_constraint_Pr__n_i_t(self):
         # TODO: REFAIRE pour que la somme des n
         return [self.add_constraint(self.Pr__n_i_t[n, i, t]
@@ -263,7 +267,11 @@ class ModelShaving(Model):
 
     def problem_cout_puissance(self):
         # ∑_(m=1)^12▒(C_P^ *(P_m^max+)
-        return sum(self.params['C__P'] * self.params['Pb_max__m'][m-1] for m in self.ens['M'])
+        return self.sum(self.params['C__P'] * self.Pr_t_max__m for m in self.ens['M'])
+
+        #return self.sum(self.params['C__P'] * self.max(self.Pr__t[self.params['t_min__m'][m-1]:self.params['t_max__m'][m-1]] )
+        #                                          for m in self.ens['M'])
+        #return [self.params['Pr_t_max__m']   for m in self.ens['M'] ]
 
     def problem_cout_infrastructure(self):
         # ∑_(i=1) ^ I▒(∑_(n=1) ^ 2▒(C_(b, n) * N_EVs * R_(ut, i) * R_(borne, ni)) )
@@ -336,6 +344,15 @@ class ModelShaving(Model):
         #self.problem_constraint_Pch_total__t()
         #self.problem_constraint_Pdis_total__t()
 
+        for m in self.ens['M']:
+
+            mini = self.params['t_min__m'][m-1]
+            maxi = self.params['t_max__m'][m-1]
+
+            maxi = maxi-mini+1
+            mini = 0
+            print(m, mini, maxi)
+            [self.add_constraint(self.Pr_t_max__m >= self.Pr__t[t] ) for t in range(mini, maxi)]
 
 
 
