@@ -136,7 +136,8 @@ class ModelShaving(Model):
         #    self.add_constraint(self.delta_ch__i_t[i, 0] == y[i - 1, 0])
         #
         return [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) == 0)
-         for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
+                #for n in self.ens['N']
+                for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_prevent_simultaneous_power_charge_and_discharge(self):
         return [self.add_constraint(self.Pch_tot__t[t] * self.Pdis_tot__t[t] == 0.0) for t in self.ens['T']]
@@ -165,7 +166,7 @@ class ModelShaving(Model):
                                     # self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n, i]
                                     self.params['NEVs'] * self.params['Rut'][i - 1] * self.Rborne__n_i[n - 1, i - 1]
                                     #* self.params['Si'][t, i - 1]
-                                     * self.delta_ch__i_t[i, 1]
+                                     * self.delta_ch__i_t[i, t]
                                     * self.params['Pb'][t]
                                     )
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']
@@ -229,6 +230,7 @@ class ModelShaving(Model):
 
     def problem_constraint_Pr__t(self):
         return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t] - self.Pdis_tot__t[t])
+#        return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t]*self.delta_ch__t[t] - self.Pdis_tot__t[t]*self.delta_dis__t[t] )
                 for t in self.ens['T']
                 ]
         # WITH delta :  - problem type is: MIQCP
