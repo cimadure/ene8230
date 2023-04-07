@@ -170,7 +170,7 @@ class ModelShaving(Model):
     def problem_constraint_Pch_total__t(self):
         [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration__t(t=t,
         s_i = self.params['Si'],
-        #delta_i_t = self.delta_ch__i_t,
+        delta_i_t = self.delta_ch__i_t,
         #r__ut_i = self.params['Rut'],
         p__n_i_t = self.Pch__n_i_t,
         r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
@@ -178,7 +178,7 @@ class ModelShaving(Model):
     def problem_constraint_Pdis_total__t(self):
         [self.add_constraint(self.Pdis_tot__t[t] == self.problem_power_aggration__t(t=t,
         s_i = self.params['Si'],
-        #delta_i_t = self.delta_dis__i_t,
+        delta_i_t = self.delta_dis__i_t,
         #r__ut_i = self.params['Rut'],
         p__n_i_t = self.Pdis__n_i_t,
         r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
