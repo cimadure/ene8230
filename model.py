@@ -85,9 +85,11 @@ class ModelShaving(Model):
 
         # TODO: WARNING: CHANGES (maybe use constains for ratio !), current value alway 0
         # self.Rborne__n_i = self.continuous_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
-        self.Rborne__n_i = 0.5 * np.ones(shape=(2, 4))
-        self.Rborne__n_i[0, 0] = .25
-        self.Rborne__n_i[1, 0] = .75
+        #self.Rborne__n_i = 0.5 * np.ones(shape=(2, 4))
+        #self.Rborne__n_i[0, 0] = .25
+        #self.Rborne__n_i[1, 0] = .75
+
+        self.Rborne__n_i = np.array([[504,	8,	152,	304],[168,	8,	152,	304]])
 
         print(self.Rborne__n_i)
 
@@ -126,19 +128,19 @@ class ModelShaving(Model):
 
     # validé
     def problem_constraint_SOC_range(self):
-        return [self.add_range(lb=self.params['SOCmin'], expr=self.SOC__n_i_t[n, i, t], ub=self.params['SOCmax'])
+        return [self.add_range(lb=self.params['SOCmin']*self.Rborne__n_i[n-1,i-1], expr=self.SOC__n_i_t[n, i, t], ub=self.params['SOCmax']*self.Rborne__n_i[n-1,i-1])
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pch_range(self):
         return [
-            self.add_range(lb=self.params['Pch_min'], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n - 1])
+            self.add_range(lb=self.params['Pch_min']*self.Rborne__n_i[n-1,i-1], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n - 1]*self.Rborne__n_i[n-1,i-1])
             for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pdis_range(self):
-        return [self.add_range(lb=self.params['Pch_min'], expr=self.Pdis__n_i_t[n, i, t],
-                               ub=self.params['Pdis_max_n'][n - 1])
+        return [self.add_range(lb=self.params['Pch_min']*self.Rborne__n_i[n-1,i-1], expr=self.Pdis__n_i_t[n, i, t],
+                               ub=self.params['Pdis_max_n'][n - 1]*self.Rborne__n_i[n-1,i-1])
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_SOC__n_i_t(self):
@@ -154,20 +156,22 @@ class ModelShaving(Model):
                                     ) for n in self.ens['N'] for i in self.ens['I'] for t in
                 range(0, self.ens['instant'] - 1)]
 
-    def problem_power_aggration__t(self, t, s_i, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
+    def problem_power_aggration__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
         # WARNING: NO delta_i_t
-        return self.params['NEVs'] * (
-            self.sum(s_i[t, i - 1] #* delta_i[i, t]
-                     * r__ut_i[i - 1]
-
-                     * self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
-                     for i in self.ens['I']))
+       # return #self.params['NEVs'] * \
+       #     (
+       return  self.sum(
+                    s_i[t, i - 1] *
+                    # delta_i_t[i, t] *
+                     #* r__ut_i[i - 1]
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     for i in self.ens['I'])
 
     def problem_constraint_Pch_total__t(self):
         [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration__t(t=t,
         s_i = self.params['Si'],
         #delta_i_t = self.delta_ch__i_t,
-        r__ut_i = self.params['Rut'],
+        #r__ut_i = self.params['Rut'],
         p__n_i_t = self.Pch__n_i_t,
         r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
 
@@ -175,7 +179,7 @@ class ModelShaving(Model):
         [self.add_constraint(self.Pdis_tot__t[t] == self.problem_power_aggration__t(t=t,
         s_i = self.params['Si'],
         #delta_i_t = self.delta_dis__i_t,
-        r__ut_i = self.params['Rut'],
+        #r__ut_i = self.params['Rut'],
         p__n_i_t = self.Pdis__n_i_t,
         r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
 
@@ -218,8 +222,8 @@ class ModelShaving(Model):
         for n in self.ens['N']:
             for i in self.ens['I']:
                 for (ta, td) in zip(self.params['arrivee'][i - 1], self.params['depart'][i - 1]):
-                    self.add_constraint(x[n, i, ta] == self.params['SOCmin'])
-                    self.add_constraint(x[n, i, td] == self.params['SOCmin'])
+                    self.add_constraint(x[n, i, ta] == self.Rborne__n_i[n-1,i-1]*self.params['SOCmin'])
+                    self.add_constraint(x[n, i, td] == self.Rborne__n_i[n-1,i-1]*self.params['SOCmin'])
 
     def problem_constraint_SOC__n_i_t_latch_on(self):
         W = 1
