@@ -203,7 +203,7 @@ class ModelShaving(Model):
     def problem_cout_infrastructure(self):
         # ∑_(i=1) ^ I▒(∑_(n=1) ^ 2▒(C_(b, n) * N_EVs * R_(ut, i) * R_(borne, ni)) )
         return sum(
-            sum(self.params['C__b_n'][n - 1, i - 1] * self.params['NEVs'] * self.params['Rut'][i - 1] *
+            sum(self.params['C__b_n'][n - 1, i - 1] * # self.params['NEVs'] * self.params['Rut'][i - 1] *
                 self.Rborne__n_i[n - 1, i - 1] for n in self.ens['N'])
             for i in self.ens['I'])
 
