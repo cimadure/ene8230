@@ -128,19 +128,27 @@ class ModelShaving(Model):
 
     # validé
     def problem_constraint_SOC_range(self):
-        return [self.add_range(lb=self.params['SOCmin']*self.Rborne__n_i[n-1,i-1], expr=self.SOC__n_i_t[n, i, t], ub=self.params['SOCmax']*self.Rborne__n_i[n-1,i-1])
+        return [self.add_range(lb=self.params['SOCmin'], #*self.Rborne__n_i[n-1,i-1],
+                               expr=self.SOC__n_i_t[n, i, t],
+                               ub=self.params['SOCmax'],#*self.Rborne__n_i[n-1,i-1]
+                               )
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pch_range(self):
         return [
-            self.add_range(lb=self.params['Pch_min']*self.Rborne__n_i[n-1,i-1], expr=self.Pch__n_i_t[n, i, t], ub=self.params['Pch_max_n'][n - 1]*self.Rborne__n_i[n-1,i-1])
+            self.add_range(lb=self.params['Pch_min'],#*self.Rborne__n_i[n-1,i-1],
+                           expr=self.Pch__n_i_t[n, i, t],
+                           ub=self.params['Pch_max_n'][n - 1]#*self.Rborne__n_i[n-1,i-1]
+                           )
             for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pdis_range(self):
-        return [self.add_range(lb=self.params['Pch_min']*self.Rborne__n_i[n-1,i-1], expr=self.Pdis__n_i_t[n, i, t],
-                               ub=self.params['Pdis_max_n'][n - 1]*self.Rborne__n_i[n-1,i-1])
+        return [self.add_range(lb=self.params['Pch_min'], #*self.Rborne__n_i[n-1,i-1],
+                               expr=self.Pdis__n_i_t[n, i, t],
+                               ub=self.params['Pdis_max_n'][n - 1]#*self.Rborne__n_i[n-1,i-1]
+                 )
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_SOC__n_i_t(self):
@@ -222,8 +230,10 @@ class ModelShaving(Model):
         for n in self.ens['N']:
             for i in self.ens['I']:
                 for (ta, td) in zip(self.params['arrivee'][i - 1], self.params['depart'][i - 1]):
-                    self.add_constraint(x[n, i, ta] == self.Rborne__n_i[n-1,i-1]*self.params['SOCmin'])
-                    self.add_constraint(x[n, i, td] == self.Rborne__n_i[n-1,i-1]*self.params['SOCmin'])
+                    self.add_constraint(x[n, i, ta] == self.params['SOCmin'] #* self.Rborne__n_i[n-1,i-1]
+                                        )
+                    self.add_constraint(x[n, i, td] == self.params['SOCmin'] #* self.Rborne__n_i[n-1,i-1]*
+                                        )
 
     def problem_constraint_SOC__n_i_t_latch_on(self):
         W = 1
