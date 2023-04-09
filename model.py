@@ -165,6 +165,7 @@ class ModelShaving(Model):
 
                                       self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t']
                                       # * self.delta_ch__i_t[i, t]
+                                      #* self.delta_soc_direction[t]
                                     - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
                                        # * self.delta_dis__i_t[i, t]
                                     # * (1-self.delta_ch__i_t[i, t])#self.delta_dis__i_t[i, t]
@@ -203,8 +204,13 @@ class ModelShaving(Model):
                      self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
                      for i in self.ens['I'])
 
+    def problem_power_aggration_only_sum__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
+       return  self.sum(
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     for i in self.ens['I'])
+
     def problem_constraint_Pch_total__t(self):
-        [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration_only_Si__t(t=t,
+        [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration_only_sum__t(t=t,
         s_i = self.params['Si'],
         delta_i_t = self.delta_ch__i_t,
         #r__ut_i = self.params['Rut'],
