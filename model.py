@@ -115,6 +115,8 @@ class ModelShaving(Model):
 
         self.Pr_t_max__m = self.continuous_var(lb=0, ub=self.params['MAX_OPTIM'], name='Pr_t_max__m')
 
+        self.delta_soc_direction = self.binary_var_list(keys=self.ens['T'], name='delta_soc_dir_')
+
     def problem_constraint_prevent_simultaneous_charge_and_discharge_i_t(self):
         # CECI EST UNE NOUVELLE VERSION QUI IMPLIQUE QUE Si[n] soit activé
         # Si Si alors soit ch ou dech
@@ -128,26 +130,26 @@ class ModelShaving(Model):
 
     # validé
     def problem_constraint_SOC_range(self):
-        return [self.add_range(lb=self.params['SOCmin'], #*self.Rborne__n_i[n-1,i-1],
+        return [self.add_range(lb=self.params['SOCmin'],
                                expr=self.SOC__n_i_t[n, i, t],
-                               ub=self.params['SOCmax'],#*self.Rborne__n_i[n-1,i-1]
+                               ub=self.params['SOCmax'],
                                )
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pch_range(self):
         return [
-            self.add_range(lb=self.params['Pch_min'],#*self.Rborne__n_i[n-1,i-1],
+            self.add_range(lb=self.params['Pch_min'],
                            expr=self.Pch__n_i_t[n, i, t],
-                           ub=self.params['Pch_max_n'][n - 1]#*self.Rborne__n_i[n-1,i-1]
+                           ub=self.params['Pch_max_n'][n - 1]
                            )
             for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pdis_range(self):
-        return [self.add_range(lb=self.params['Pch_min'], #*self.Rborne__n_i[n-1,i-1],
+        return [self.add_range(lb=self.params['Pch_min'],
                                expr=self.Pdis__n_i_t[n, i, t],
-                               ub=self.params['Pdis_max_n'][n - 1]#*self.Rborne__n_i[n-1,i-1]
+                               ub=self.params['Pdis_max_n'][n - 1]
                  )
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
@@ -156,11 +158,18 @@ class ModelShaving(Model):
         # Mod avec Pr__n_i_t
         return [self.add_constraint(self.SOC__n_i_t[n, i, t + 1] ==
                                     self.SOC__n_i_t[n, i, t]
-                                    + self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params[
-                                        'delta_t']  # * self.delta_ch__i_t[i, t]
+                                    +
+                                    self.params['Si'][t, i - 1] *
+                                    #1.0 *
+                                    (
+
+                                      self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t']
+                                      # * self.delta_ch__i_t[i, t]
                                     - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
+                                       # * self.delta_dis__i_t[i, t]
                                     # * (1-self.delta_ch__i_t[i, t])#self.delta_dis__i_t[i, t]
                                     # + self.Pr__n_i_t[n, i, t]
+                                    )
                                     ) for n in self.ens['N'] for i in self.ens['I'] for t in
                 range(0, self.ens['instant'] - 1)]
 
@@ -175,8 +184,27 @@ class ModelShaving(Model):
                      self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
                      for i in self.ens['I'])
 
+    def problem_power_aggration_Si_with_delta__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
+       return  self.sum(
+                    s_i[t, i - 1] *
+                    delta_i_t[i, t] *
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     for i in self.ens['I'])
+
+    def problem_power_aggration_only_delta__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
+       return  self.sum(
+                    delta_i_t[i, t] *
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     for i in self.ens['I'])
+
+    def problem_power_aggration_only_Si__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
+       return  self.sum(
+                    s_i[t, i - 1] *
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     for i in self.ens['I'])
+
     def problem_constraint_Pch_total__t(self):
-        [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration__t(t=t,
+        [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration_only_Si__t(t=t,
         s_i = self.params['Si'],
         delta_i_t = self.delta_ch__i_t,
         #r__ut_i = self.params['Rut'],
@@ -184,7 +212,7 @@ class ModelShaving(Model):
         r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
 
     def problem_constraint_Pdis_total__t(self):
-        [self.add_constraint(self.Pdis_tot__t[t] == self.problem_power_aggration__t(t=t,
+        [self.add_constraint(self.Pdis_tot__t[t] == self.problem_power_aggration_only_Si__t(t=t,
         s_i = self.params['Si'],
         delta_i_t = self.delta_ch__i_t,
         #r__ut_i = self.params['Rut'],
@@ -230,9 +258,9 @@ class ModelShaving(Model):
         for n in self.ens['N']:
             for i in self.ens['I']:
                 for (ta, td) in zip(self.params['arrivee'][i - 1], self.params['depart'][i - 1]):
-                    self.add_constraint(x[n, i, ta] == self.params['SOCmin'] #* self.Rborne__n_i[n-1,i-1]
+                    self.add_constraint(x[n, i, ta] == self.params['SOCmin']
                                         )
-                    self.add_constraint(x[n, i, td] == self.params['SOCmin'] #* self.Rborne__n_i[n-1,i-1]*
+                    self.add_constraint(x[n, i, td] == self.params['SOCmin']
                                         )
 
     def problem_constraint_SOC__n_i_t_latch_on(self):
