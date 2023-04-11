@@ -89,7 +89,8 @@ class ModelShaving(Model):
         #self.Rborne__n_i[0, 0] = .25
         #self.Rborne__n_i[1, 0] = .75
 
-        self.Rborne__n_i = np.array([[504,	8,	152,	304],[168,	8,	152,	304]])
+#        self.Rborne__n_i = np.array([[504,	8,	152,	304],[168,	8,	152,	304]])
+        self.Rborne__n_i = np.array([[32,	1,	10,	19],[11,	1,	10,	19]])
 
         print(self.Rborne__n_i)
 
@@ -159,12 +160,12 @@ class ModelShaving(Model):
         return [self.add_constraint(self.SOC__n_i_t[n, i, t + 1] ==
                                     self.SOC__n_i_t[n, i, t]
                                     +
-                                    self.params['Si'][t, i - 1] *
+                                    self.params['Si'][t+1, i - 1] *
                                     #1.0 *
                                     (
 
                                       self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t']
-                                      # * self.delta_ch__i_t[i, t]
+                                       #* self.delta_ch__i_t[i, t   ]
                                       #* self.delta_soc_direction[t]
                                     - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
                                        # * self.delta_dis__i_t[i, t]
@@ -264,11 +265,12 @@ class ModelShaving(Model):
         for n in self.ens['N']:
             for i in self.ens['I']:
                 for (ta, td) in zip(self.params['arrivee'][i - 1], self.params['depart'][i - 1]):
-                    self.add_constraint(x[n, i, ta] == self.params['SOCmin']
-                                        )
-                    self.add_constraint(x[n, i, td] == self.params['SOCmin']
-                                        )
+                    #self.add_constraint(x[n, i, ta] >= self.params['SOCmin'])
+                    #self.add_constraint(x[n, i, ta] == self.params['SOCmax'])
+                    #self.add_constraint(x[n, i, td] == self.params['SOCmax'])
 
+                    self.add_constraint(x[n, i, ta] == self.params['SOCmax'])
+                    self.add_constraint(x[n, i, td] == self.params['SOCmax'])
     def problem_constraint_SOC__n_i_t_latch_on(self):
         W = 1
         y = self.params['Si']
