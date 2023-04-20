@@ -85,6 +85,8 @@ class ModelShaving(Model):
 
         # TODO: WARNING: CHANGES (maybe use constains for ratio !), current value alway 0
         # self.Rborne__n_i = self.continuous_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
+        # self.Rborne__n_i = self.integer_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
+
         #self.Rborne__n_i = 0.5 * np.ones(shape=(2, 4))
         #self.Rborne__n_i[0, 0] = .25
         #self.Rborne__n_i[1, 0] = .75
@@ -92,7 +94,7 @@ class ModelShaving(Model):
 #        self.Rborne__n_i = np.array([[504,	8,	152,	304],[168,	8,	152,	304]])
         self.Rborne__n_i = np.array([[32,	1,	10,	19],[11,	1,	10,	19]])
 
-        print(self.Rborne__n_i)
+        #print(self.Rborne__n_i)
 
         self.Pch__i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
                                                    ub=self.params['MAX_OPTIM'], name='Pch__i_t_')
