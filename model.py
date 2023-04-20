@@ -291,7 +291,9 @@ class ModelShaving(Model):
         x = self.SOC__n_i_t
         for n in self.ens['N']:
             for i in self.ens['I']:
-                [self.add_constraint(x[n, i,t] == self.params['SOCmin']) for t in self.params['arrivee'][i - 1]]
+                [self.add_constraint(x[n, i,t] == self.params['SOCmin'],
+                                     ctname='ctr_SOC_n_i_t_arrivee_{n}_{i}_{t}'.format(n=i, i=i,t=t))
+                 for t in self.params['arrivee'][i - 1]]
 
     def problem_constraint_SOC__n_i_t_depart(self):
         x = self.SOC__n_i_t
