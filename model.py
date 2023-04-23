@@ -1,7 +1,7 @@
 import numpy as np
 # from docplex.mp.advmodel import AdvModel
 from docplex.mp.model import Model
-
+import sys
 
 def func(x):
     return x + 1
@@ -85,14 +85,14 @@ class ModelShaving(Model):
 
         # TODO: WARNING: CHANGES (maybe use constains for ratio !), current value alway 0
         # self.Rborne__n_i = self.continuous_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
-        # self.Rborne__n_i = self.integer_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
+        self.Rborne__n_i = self.integer_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
 
         #self.Rborne__n_i = 0.5 * np.ones(shape=(2, 4))
         #self.Rborne__n_i[0, 0] = .25
         #self.Rborne__n_i[1, 0] = .75
 
 #        self.Rborne__n_i = np.array([[504,	8,	152,	304],[168,	8,	152,	304]])
-        self.Rborne__n_i = np.array([[32,	1,	10,	19],[11,	1,	10,	19]])
+        #self.Rborne__n_i = np.array([[32,	1,	10,	19],[11,	1,	10,	19]])
 
         #print(self.Rborne__n_i)
 
@@ -101,12 +101,6 @@ class ModelShaving(Model):
 
         self.Pdis__i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
                                                     ub=self.params['MAX_OPTIM'], name='Pdis__i_t_')
-
-        self.Pch_demand_i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
-                                                         ub=self.params['MAX_OPTIM'], name='Pch_demand_i_t_')
-
-        self.Pdis_demand_i_t = self.continuous_var_matrix(keys1=self.ens['I'], keys2=self.ens['T'], lb=0,
-                                                          ub=self.params['MAX_OPTIM'], name='Pdis_demand_i_t_')
 
         self.Pch_tot__t = self.continuous_var_list(keys=self.ens['T'], lb=0,
                                                    ub=self.params['MAX_OPTIM'], name='Pch_tot_')
@@ -120,45 +114,59 @@ class ModelShaving(Model):
 
         self.delta_soc_direction = self.binary_var_list(keys=self.ens['T'], name='delta_soc_dir_')
 
+
+    def problem_constraint_Rborne__n_i(self):
+        fname = sys._getframe(0).f_code.co_name
+        [self.add_constraint(self.Rborne__n_i[n,i] == 30,
+                             ctname='low_ctr_'+fname+'_n_i__{n}_{i}'.format(n=n,i=i)
+                             ) for n in self.ens['N'] for i in self.ens['I']]
+
     def problem_constraint_prevent_simultaneous_charge_and_discharge_i_t(self):
+        fname = sys._getframe(0).f_code.co_name
         # CECI EST UNE NOUVELLE VERSION QUI IMPLIQUE QUE Si[n] soit activé
         # Si Si alors soit ch ou dech
         # return [self.add_constraint(self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t] <= 1.0)
         #        for i in self.ens['I'] for t in self.ens['T']]
         y = self.params['Si']
-        [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) <= 1)
+        [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) <= 1,
+                             ctname='low_ctr_'+fname+'_1_i_t__{i}_{t}'.format(i=i,t=t))
          for i in self.ens['I'] for t in self.ens['T']]
-        [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) >= 0)
+        [self.add_constraint(y[t, i - 1] - (self.delta_ch__i_t[i, t] + self.delta_dis__i_t[i, t]) >= 0,
+                             ctname='low_ctr_' + fname + '_2_i_t__{i}_{t}'.format(i=i, t=t))
          for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_SOC_range(self):
+        fname = sys._getframe(0).f_code.co_name
         return [self.add_range(lb=self.params['SOCmin'],
                                expr=self.SOC__n_i_t[n, i, t],
                                ub=self.params['SOCmax'],
-                               )
+                               rng_name='low_ctr_'+fname+'_n_i_t__{n}_{i}_{t}'.format(n=n,i=i,t=t))
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pch_range(self):
+        fname = sys._getframe(0).f_code.co_name
         return [
             self.add_range(lb=self.params['Pch_min'],
                            expr=self.Pch__n_i_t[n, i, t],
-                           ub=self.params['Pch_max_n'][n - 1]
-                           )
+                           ub=self.params['Pch_max_n'][n - 1],
+                           rng_name='low_ctr_' + fname + '_n_i_t__{n}_{i}_{t}'.format(n=n, i=i, t=t))
             for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     # validé
     def problem_constraint_Pdis_range(self):
+        fname = sys._getframe(0).f_code.co_name
         return [self.add_range(lb=self.params['Pch_min'],
                                expr=self.Pdis__n_i_t[n, i, t],
-                               ub=self.params['Pdis_max_n'][n - 1]
-                 )
+                               ub=self.params['Pdis_max_n'][n - 1],
+                               rng_name='high_ctr_' + fname + '_n_i_t__{n}_{i}_{t}'.format(n=n, i=i, t=t))
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
     def problem_constraint_SOC__n_i_t(self):
         # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
         # Mod avec Pr__n_i_t
+        fname = sys._getframe(0).f_code.co_name
         return [self.add_constraint(self.SOC__n_i_t[n, i, t + 1] ==
                                     self.SOC__n_i_t[n, i, t]
                                     +
@@ -173,12 +181,14 @@ class ModelShaving(Model):
                                        # * self.delta_dis__i_t[i, t]
                                     # * (1-self.delta_ch__i_t[i, t])#self.delta_dis__i_t[i, t]
                                     # + self.Pr__n_i_t[n, i, t]
-                                    )
-                                    ) for n in self.ens['N'] for i in self.ens['I'] for t in
+                                    ),
+                                    ctname='low_ctr_' + fname + '_n_i_t__{n}_{i}_{t}'.format(n=n, i=i, t=t))
+                for n in self.ens['N'] for i in self.ens['I'] for t in
                 range(0, self.ens['instant'] - 1)]
 
 
     def problem_constraint_SOC__v2_n_i_t(self):
+        fname = sys._getframe(0).f_code.co_name
         for i in self.ens['I'] :
             for t in range(0, self.ens['instant'] - 1):
                 if self.params['Si'][t,i-1] == 1.0:
@@ -188,8 +198,9 @@ class ModelShaving(Model):
                                     (
                                       self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t']
                                     - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
-                                    )
-                                    ) for n in self.ens['N']]
+                                    ),
+                                    ctname='low_ctr_' + fname + '_n_i_t__{n}_{i}_{t}'.format(n=n, i=i, t=t))
+                     for n in self.ens['N']]
 
     def problem_power_aggration__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
         # WARNING: NO delta_i_t
@@ -199,51 +210,83 @@ class ModelShaving(Model):
                     s_i[t, i - 1] *
                     # delta_i_t[i, t] *
                      #* r__ut_i[i - 1]
-                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 0, i - 0] for n in self.ens['N'])
                      for i in self.ens['I'])
 
     def problem_power_aggration_Si_with_delta__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
        return  self.sum(
                     s_i[t, i - 1] *
                     delta_i_t[i, t] *
-                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 0, i - 0] for n in self.ens['N'])
                      for i in self.ens['I'])
 
     def problem_power_aggration_only_delta__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
        return  self.sum(
                     delta_i_t[i, t] *
-                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 0, i - 0] for n in self.ens['N'])
                      for i in self.ens['I'])
 
     def problem_power_aggration_only_Si__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
        return  self.sum(
                     s_i[t, i - 1] *
-                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 0, i - 0] for n in self.ens['N'])
                      for i in self.ens['I'])
 
     def problem_power_aggration_only_sum__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
        return  self.sum(
-                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
+                     self.sum(p__n_i_t[n, i, t] * r__n_i[n - 0, i - 0] for n in self.ens['N'])
                      for i in self.ens['I'])
 
+
+    def problem_constraint_Pch_total__t_rc(self):
+        fname = sys._getframe(0).f_code.co_name
+        [self.add_constraint( self.Pch_tot__t[t] == self.sum(self.Pch__i_t[i,t] for i in self.ens['I']),
+                             ctname='low_ctr_' + fname + '_t__{t}'.format(t=t)
+                             ) for t in self.ens['T']]
+
+    def problem_constraint_Pch_i_t_rc(self):
+        fname = sys._getframe(0).f_code.co_name
+        #[self.add_constraint( self.sum(self.Pch__i_t[i,t] for i in self.ens['I']) == self.sum(self.Rborne__n_i[n,i] * self.Pch__n_i_t[n,i,t] for i in self.ens['I'] for n in self.ens['N']),
+        #                     ctname='low_ctr_' + fname + '_t__{t}'.format(t=t)
+        #                     ) for t in self.ens['T'] ]
+
+        #m = self.Rborne__n_i[1,1] * self.Pch__i_t[1,1]
+        #m = self.Rborne__n_i[2,1] * self.Pch__i_t[1,1]
+        #self.dot(self.Pch__i_t[1,1],[self.Rborne__n_i[1,1], self.Rborne__n_i[2,1]])
+        #self.dot(self.Pch__i_t[1,1],[self.Rborne__n_i[1,1], self.Rborne__n_i[2,1]])
+
+        [self.add_constraint(self.Pch__i_t[i, t] == self.delta_ch__i_t[i,t] * self.sum(
+              self.Pch__n_i_t[n, i, t] for n in self.ens['N']) ,
+                             ctname='low_ctr_' + fname + '_t__{t}'.format(t=t)
+                             ) for t in self.ens['T'] for i in self.ens['I']]
+
     def problem_constraint_Pch_total__t(self):
+        fname = sys._getframe(0).f_code.co_name
         [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration_only_sum__t(t=t,
         s_i = self.params['Si'],
         delta_i_t = self.delta_ch__i_t,
         #r__ut_i = self.params['Rut'],
         p__n_i_t = self.Pch__n_i_t,
-        r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
+        r__n_i = self.Rborne__n_i),
+                             ctname='low_ctr_' + fname + '_t__{t}'.format(t=t)
+                             ) for t in self.ens['T']]
 
     def problem_constraint_Pdis_total__t(self):
+        fname = sys._getframe(0).f_code.co_name
         [self.add_constraint(self.Pdis_tot__t[t] == self.problem_power_aggration_only_Si__t(t=t,
         s_i = self.params['Si'],
         delta_i_t = self.delta_ch__i_t,
         #r__ut_i = self.params['Rut'],
         p__n_i_t = self.Pdis__n_i_t,
-        r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
+        r__n_i = self.Rborne__n_i),
+                             ctname = 'low_ctr_' + fname + '_t__{t}'.format(t=t)
+        ) for t in self.ens['T']]
 
     def problem_constraint_Pr__t(self):
-        return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t] - self.Pdis_tot__t[t])
+        fname = sys._getframe(0).f_code.co_name
+        return [self.add_constraint( self.params['Pb'][t] == self.Pr__t[t] - self.Pch_tot__t[t] + self.Pdis_tot__t[t],
+                                    ctname='low_ctr_' + fname + '_t__{t}'.format(t=t)
+                                    )
                 #        return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t]*self.delta_ch__t[t] - self.Pdis_tot__t[t]*self.delta_dis__t[t] )
                 for t in self.ens['T']
                 ]
@@ -263,9 +306,74 @@ class ModelShaving(Model):
         # ∑_(i=1) ^ I▒(∑_(n=1) ^ 2▒(C_(b, n) * N_EVs * R_(ut, i) * R_(borne, ni)) )
         return sum(
             sum(self.params['C__b_n'][n - 1, i - 1] * # self.params['NEVs'] * self.params['Rut'][i - 1] *
-                self.Rborne__n_i[n - 1, i - 1] for n in self.ens['N'])
+                self.Rborne__n_i[n - 0, i - 0] for n in self.ens['N'])
             for i in self.ens['I']) *  sum(self.params['delta_t'] for t in self.ens['T'])
 
+
+    def problem_constraint_SOC__n_i_t_arrivee(self):
+        x = self.SOC__n_i_t
+        for n in self.ens['N']:
+            for i in self.ens['I']:
+                [self.add_constraint(x[n, i,t] == self.params['SOCmin'], # p'tre SOCarrivee
+                                     ctname='very_low_ctr_SOC_n_i_t_arrivee_{n}_{i}_{t}'.format(n=i, i=i,t=t))
+                 for t in self.params['arrivee'][i - 1]]
+
+    def problem_constraint_SOC__n_i_t_depart(self):
+        x = self.SOC__n_i_t
+        for n in self.ens['N']:
+            for i in self.ens['I']:
+                [self.add_constraint(x[n, i, t] == self.params['SOCmax'],
+                                     ctname='very_high_ctr_SOC_n_i_t_depart_{n}_{i}_{t}'.format(n=i, i=i, t=t)
+                ) for t in self.params['depart'][i - 1]]
+
+    def problem_constraint_Pr_t__max__m(self):
+        fname = sys._getframe(0).f_code.co_name
+        for m in self.ens['M']:
+            mini = self.params['t_min__m'][m - 1]
+            maxi = self.params['t_max__m'][m - 1]
+
+            maxi = maxi - mini + 1
+            mini = 0
+            print(m, mini, maxi)
+            [self.add_constraint(self.Pr_t_max__m >= self.Pr__t[t],
+                                 ctname='high_ctr_' + fname + '_t__{t}'.format(t=t)
+                                 ) for t in range(mini, maxi)]
+
+    def problem_constraint_Pr_t__threshold__m(self):
+        fname = sys._getframe(0).f_code.co_name
+        for m in self.ens['M']:
+            mini = self.params['t_min__m'][m - 1]
+            maxi = self.params['t_max__m'][m - 1]
+
+            maxi = maxi - mini + 1
+            mini = 0
+            print(m, mini, maxi)
+            [self.add_constraint(self.Pr_t_max__m >= self.params['P_souscrite'],
+                                 ctname='high_ctr_' + fname + '_t__{t}'.format(t=t)
+                                 ) for t in range(mini, maxi)]
+
+    def problem_constraints(self):
+        #self.problem_constraint_SOC_range()
+        #self.problem_constraint_Pch_range()
+        #self.problem_constraint_Pdis_range()
+
+        pass
+        # [self.add_constraint(self.sum(self.Pch__n_i_t[n, i, t] for n in self.ens['N'])
+        #                      * self.sum(self.Pdi__n_i_t[n, i, t] for n in self.ens['N']) == 0 for i in self.ens['I'])
+        #  for t in self.ens['T']]
+
+
+
+
+
+    def problem_constraint_SOC__n_i_t_latch_on(self):
+        W = 1
+        y = self.params['Si']
+        s = self.con__n_i_t
+        for n in self.ens['N']:
+            for i in self.ens['I']:
+                self.add_constraints(
+                    [self.sum(s[n, i, t - min((t + 1, W)) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
     def problem_constraint_uc_soc_ramp_up_and_soc_ramp_down(self):
         PU = self.params['SOCmin'] / self.params['delta_t']
         PD = self.params['SOCmax'] / self.params['delta_t']
@@ -288,57 +396,3 @@ class ModelShaving(Model):
 
                     #self.add_constraint(x[n, i, ta] == self.params['SOCmax'])
                     #self.add_constraint(x[n, i, td] == self.params['SOCmax'])
-
-    def problem_constraint_SOC__n_i_t_arrivee(self):
-        x = self.SOC__n_i_t
-        for n in self.ens['N']:
-            for i in self.ens['I']:
-                [self.add_constraint(x[n, i,t] == self.params['SOCmin'],
-                                     ctname='ctr_SOC_n_i_t_arrivee_{n}_{i}_{t}'.format(n=i, i=i,t=t))
-                 for t in self.params['arrivee'][i - 1]]
-
-    def problem_constraint_SOC__n_i_t_depart(self):
-        x = self.SOC__n_i_t
-        for n in self.ens['N']:
-            for i in self.ens['I']:
-                [self.add_constraint(x[n, i, t] == self.params['SOCmax']) for t in self.params['depart'][i - 1]]
-
-    def problem_constraint_SOC__n_i_t_latch_on(self):
-        W = 1
-        y = self.params['Si']
-        s = self.con__n_i_t
-        for n in self.ens['N']:
-            for i in self.ens['I']:
-                self.add_constraints(
-                    [self.sum(s[n, i, t - min((t + 1, W)) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
-
-    def problem_constraint_Pr_t__max__m(self):
-        for m in self.ens['M']:
-            mini = self.params['t_min__m'][m - 1]
-            maxi = self.params['t_max__m'][m - 1]
-
-            maxi = maxi - mini + 1
-            mini = 0
-            print(m, mini, maxi)
-            [self.add_constraint(self.Pr_t_max__m >= self.Pr__t[t]) for t in range(mini, maxi)]
-
-    def problem_constraint_Pr_t__threshold__m(self):
-        for m in self.ens['M']:
-            mini = self.params['t_min__m'][m - 1]
-            maxi = self.params['t_max__m'][m - 1]
-
-            maxi = maxi - mini + 1
-            mini = 0
-            print(m, mini, maxi)
-            [self.add_constraint(self.Pr_t_max__m >= self.params['P_souscrite']) for t in range(mini, maxi)]
-
-
-    def problem_constraints(self):
-        self.problem_constraint_SOC_range()
-        self.problem_constraint_Pch_range()
-        self.problem_constraint_Pdis_range()
-
-
-        # [self.add_constraint(self.sum(self.Pch__n_i_t[n, i, t] for n in self.ens['N'])
-        #                      * self.sum(self.Pdi__n_i_t[n, i, t] for n in self.ens['N']) == 0 for i in self.ens['I'])
-        #  for t in self.ens['T']]
