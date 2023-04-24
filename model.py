@@ -293,7 +293,7 @@ class ModelShaving(Model):
     def problem_constraint_Pess_range_v3(self):
         return [self.add_range(lb=-self.params['Pdis_max_n'][n - 1],
                                expr=self.Pess__n_i_t[n, i, t],
-                               ub=self.params['Pdis_max_n'][n - 1]
+                               ub=self.params['Pch_max_n'][n - 1]
                  )
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
