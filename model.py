@@ -120,6 +120,19 @@ class ModelShaving(Model):
 
         self.delta_soc_direction = self.binary_var_list(keys=self.ens['T'], name='delta_soc_dir_')
 
+
+        ### NEW Modeling with ESS
+        self.Pess__n_i_t = self.continuous_var_cube(keys1=self.ens['N'], keys2=self.ens['I'], keys3=self.ens['T'],
+                                                    lb=-self.params['MAX_OPTIM'],
+                                                    ub=self.params['MAX_OPTIM'],
+                                                    name='Pess__n_i_t_')  # , key_format=None)
+
+
+        self.Pess__t = self.continuous_var_list(keys=self.ens['T'],
+                                                   lb=-self.params['MAX_OPTIM'],
+                                                   ub=self.params['MAX_OPTIM'], name='Pess__t_')
+
+
     def problem_constraint_prevent_simultaneous_charge_and_discharge_i_t(self):
         # CECI EST UNE NOUVELLE VERSION QUI IMPLIQUE QUE Si[n] soit activé
         # Si Si alors soit ch ou dech
@@ -191,6 +204,21 @@ class ModelShaving(Model):
                                     )
                                     ) for n in self.ens['N']]
 
+
+    def problem_constraint_SOC__v3_n_i_t(self):
+        for i in self.ens['I'] :
+            for t in range(0, self.ens['instant'] - 1):
+                if self.params['Si'][t,i-1] == 1.0:
+                    [self.add_constraint(self.SOC__n_i_t[n, i, t + 1] ==
+                                    self.SOC__n_i_t[n, i, t]
+                                    +
+                                    (
+                                      self.params['beta_ch'] * self.Pess__n_i_t[n, i, t] * self.params['delta_t']
+                                    )
+                                    ) for n in self.ens['N']]
+
+
+
     def problem_power_aggration__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
         # WARNING: NO delta_i_t
        # return #self.params['NEVs'] * \
@@ -249,6 +277,26 @@ class ModelShaving(Model):
                 ]
         # WITH delta :  - problem type is: MIQCP
         # Error: Model has non-convex quadratic constraint, index=0
+    def problem_constraint_Pr__t_v3(self):
+        return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] - self.Pess__t[t])
+                            for t in self.ens['T']
+                ]
+
+    def problem_constraint_Pess__t_v3(self):
+        [self.add_constraint(self.Pess__t[t] == self.problem_power_aggration_only_Si__t(t=t,
+        s_i = self.params['Si'],
+        #delta_i_t = self.delta_ch__i_t,
+        p__n_i_t = self.Pess__n_i_t,
+        r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
+
+
+    def problem_constraint_Pess_range_v3(self):
+        return [self.add_range(lb=-self.params['Pdis_max_n'][n - 1],
+                               expr=self.Pess__n_i_t[n, i, t],
+                               ub=self.params['Pdis_max_n'][n - 1]
+                 )
+                for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
+
 
     def problem_cout_energie(self):
         # Min∑_(t=1)^H▒(C_E^ *P_r^  (t)*∆t)
