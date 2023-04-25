@@ -155,6 +155,13 @@ class ModelShaving(Model):
                                )
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
+
+    def problem_constraint_SOC_range_v3(self):
+        pass
+        #        for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
+
+
+
     # validé
     def problem_constraint_Pch_range(self):
         return [
@@ -207,19 +214,46 @@ class ModelShaving(Model):
                                     )
                                     ) for n in self.ens['N']]
 
+#
+# def problem_constraint_SOC__v3_n_i_t(self):
+#         for i in self.ens['I']:
+#             for t in range(0, self.ens['instant'] - 1):
+#                 if self.params['Si'][t, i - 1] == 1.0:
+#                    # if t not in np.concatenate((self.params['depart'][0], self.params['arrivee'][0]), axis=0):
+#                         [self.add_constraint(self.SOC__n_i_t[n, i, t] ==
+#                                         self.SOC__n_i_t[n, i, t-1]
+#                                         -
+#                                         (
+#                                           self.params['beta_ch'] * self.Pess__n_i_t[n, i, t] * self.params['delta_t']
+#                                         )
+#                                         ) for n in self.ens['N']]
+#                 else:
+#                     [self.add_constraint(self.SOC__n_i_t[n, i, t] == 0) for n in self.ens['N']]
+#                     #pass
 
+# for a, d in (self.params['arrivee'][c - 1], self.params['depart'][c - 1])
     def problem_constraint_SOC__v3_n_i_t(self):
-        for i in self.ens['I'] :
-            for t in range(0, self.ens['instant'] - 1):
-                if self.params['Si'][t,i-1] == 1.0:
-                    [self.add_constraint(self.SOC__n_i_t[n, i, t + 1] ==
-                                    self.SOC__n_i_t[n, i, t]
-                                    +
-                                    (
-                                      self.params['beta_ch'] * self.Pess__n_i_t[n, i, t] * self.params['delta_t']
-                                    )
-                                    ) for n in self.ens['N']]
+        for i in self.ens['I']:
+            for c in range(0, len(self.params['arrivee'])-1):
+                #print(c)
+                for t in range(self.params['arrivee'][i - 1][c]+1, self.params['depart'][i - 1][c]-1):
+                    #print(t)
+                    [self.add_constraint(self.SOC__n_i_t[n, i, t] ==
+                                            self.SOC__n_i_t[n, i, t-1]
+                                            -
+                                            (
+                                              self.params['beta_ch'] * self.Pess__n_i_t[n, i, t] * self.params['delta_t']
+                                            )
+                                            ) for n in self.ens['N']]
 
+                    [self.add_range(lb=self.params['SOCmin'],
+                                    expr=self.SOC__n_i_t[n, i, t],
+                                    ub=self.params['SOCmax'],
+                                    #rng_name='SOC_range_in_SOC_V3_{n}{i}{t}'%(n,i,t)
+                                    ) for n in self.ens['N']]
+                    #else:
+                    #    [self.add_constraint(self.SOC__n_i_t[n, i, t] == 0) for n in self.ens['N']]
+                        #pass
 
 
     def problem_power_aggration__t(self, t, s_i=None, delta_i_t=None, r__ut_i=None, p__n_i_t=None, r__n_i=None):
@@ -279,7 +313,9 @@ class ModelShaving(Model):
                 for t in self.ens['T']
                 ]
         # WITH delta :  - problem type is: MIQCP
+
         # Error: Model has non-convex quadratic constraint, index=0
+    #5.1
     def problem_constraint_Pr__t_v3(self):
         return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] - self.Pess__t[t])
                             for t in self.ens['T']
@@ -385,7 +421,7 @@ class ModelShaving(Model):
 
 
     def problem_constraints(self):
-        self.problem_constraint_SOC_range()
+        #self.problem_constraint_SOC_range()
         self.problem_constraint_Pch_range()
         self.problem_constraint_Pdis_range()
 
