@@ -246,6 +246,7 @@ class ModelShaving(Model):
                                             )
                                             ) for n in self.ens['N']]
 
+                    # CONTRAINTES DE RANGE A L'INTERIEUR DE CETTE BOUCLE
                     [self.add_range(lb=self.params['SOCmin'],
                                     expr=self.SOC__n_i_t[n, i, t],
                                     ub=self.params['SOCmax'],
