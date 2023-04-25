@@ -177,38 +177,6 @@ class ModelShaving(Model):
                                     ) for n in self.ens['N'] for i in self.ens['I'] for t in
                 range(0, self.ens['instant'] - 1)]
 
-
-    def problem_constraint_SOC__v2_n_i_t(self):
-        for i in self.ens['I'] :
-            for t in range(0, self.ens['instant'] - 1):
-                if self.params['Si'][t,i-1] == 1.0:
-                    [self.add_constraint(self.SOC__n_i_t[n, i, t + 1] ==
-                                    self.SOC__n_i_t[n, i, t]
-                                    +
-                                    (
-                                      self.params['beta_ch'] * self.Pch__n_i_t[n, i, t] * self.params['delta_t']
-                                    - self.params['beta_dis'] * self.Pdis__n_i_t[n, i, t] * self.params['delta_t']
-                                    )
-                                    ) for n in self.ens['N']]
-
-#
-# def problem_constraint_SOC__v3_n_i_t(self):
-#         for i in self.ens['I']:
-#             for t in range(0, self.ens['instant'] - 1):
-#                 if self.params['Si'][t, i - 1] == 1.0:
-#                    # if t not in np.concatenate((self.params['depart'][0], self.params['arrivee'][0]), axis=0):
-#                         [self.add_constraint(self.SOC__n_i_t[n, i, t] ==
-#                                         self.SOC__n_i_t[n, i, t-1]
-#                                         -
-#                                         (
-#                                           self.params['beta_ch'] * self.Pess__n_i_t[n, i, t] * self.params['delta_t']
-#                                         )
-#                                         ) for n in self.ens['N']]
-#                 else:
-#                     [self.add_constraint(self.SOC__n_i_t[n, i, t] == 0) for n in self.ens['N']]
-#                     #pass
-
-# for a, d in (self.params['arrivee'][c - 1], self.params['depart'][c - 1])
     def problem_constraint_SOC__v3_n_i_t(self):
         for i in self.ens['I']:
             for c in range(0, len(self.params['arrivee'])-1):
@@ -269,21 +237,7 @@ class ModelShaving(Model):
                      self.sum(p__n_i_t[n, i, t] * r__n_i[n - 1, i - 1] for n in self.ens['N'])
                      for i in self.ens['I'])
 
-    def problem_constraint_Pch_total__t(self):
-        [self.add_constraint(self.Pch_tot__t[t] == self.problem_power_aggration_only_sum__t(t=t,
-        s_i = self.params['Si'],
-        delta_i_t = self.delta_ch__i_t,
-        #r__ut_i = self.params['Rut'],
-        p__n_i_t = self.Pch__n_i_t,
-        r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
 
-    def problem_constraint_Pdis_total__t(self):
-        [self.add_constraint(self.Pdis_tot__t[t] == self.problem_power_aggration_only_Si__t(t=t,
-        s_i = self.params['Si'],
-        delta_i_t = self.delta_ch__i_t,
-        #r__ut_i = self.params['Rut'],
-        p__n_i_t = self.Pdis__n_i_t,
-        r__n_i = self.Rborne__n_i)) for t in self.ens['T']]
 
     def problem_constraint_Pr__t(self):
         return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pch_tot__t[t] - self.Pdis_tot__t[t])
@@ -331,15 +285,6 @@ class ModelShaving(Model):
                 self.Rborne__n_i[n - 1, i - 1] for n in self.ens['N'])
             for i in self.ens['I']) *  sum(self.params['delta_t'] for t in self.ens['T'])
 
-    def problem_constraint_uc_soc_ramp_up_and_soc_ramp_down(self):
-        PU = self.params['SOCmin'] / self.params['delta_t']
-        PD = self.params['SOCmax'] / self.params['delta_t']
-        x = self.SOC__n_i_t
-        for n in self.ens['N']:
-            for i in self.ens['I']:
-                for t in range(1, self.ens['instant']):
-                    self.add_constraint(x[n, i, t] - x[n, i, t - 1] <= PU)
-                    self.add_constraint(x[n, i, t - 1] - x[n, i, t] <= PD)
 
 
     def problem_constraint_SOC__n_i_t_arrivee(self):
@@ -356,14 +301,6 @@ class ModelShaving(Model):
             for i in self.ens['I']:
                 [self.add_constraint(x[n, i, t] >= self.params['SOCmax']) for t in self.params['depart'][i - 1]]
 
-    def problem_constraint_SOC__n_i_t_latch_on(self):
-        W = 3
-        y = self.params['Si']
-        s = self.delta_ch__i_t
-        for n in self.ens['N']:
-            for i in self.ens['I']:
-                self.add_constraints(
-                    [self.sum(s[n, i, t - self.min(t + 1, W) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
 
     def problem_constraint_Pr_t__max__m(self):
         for m in self.ens['M']:
@@ -395,3 +332,26 @@ class ModelShaving(Model):
         # [self.add_constraint(self.sum(self.Pch__n_i_t[n, i, t] for n in self.ens['N'])
         #                      * self.sum(self.Pdi__n_i_t[n, i, t] for n in self.ens['N']) == 0 for i in self.ens['I'])
         #  for t in self.ens['T']]
+
+
+    def problem_constraint_SOC__n_i_t_latch_on(self):
+        W = 3
+        y = self.params['Si']
+        s = self.delta_ch__i_t
+        for n in self.ens['N']:
+            for i in self.ens['I']:
+                self.add_constraints(
+                    [self.sum(s[n, i, t - self.min(t + 1, W) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
+
+
+
+    def problem_constraint_uc_soc_ramp_up_and_soc_ramp_down(self):
+        PU = self.params['SOCmin'] / self.params['delta_t']
+        PD = self.params['SOCmax'] / self.params['delta_t']
+        x = self.SOC__n_i_t
+        for n in self.ens['N']:
+            for i in self.ens['I']:
+                for t in range(1, self.ens['instant']):
+                    self.add_constraint(x[n, i, t] - x[n, i, t - 1] <= PU)
+                    self.add_constraint(x[n, i, t - 1] - x[n, i, t] <= PD)
+
