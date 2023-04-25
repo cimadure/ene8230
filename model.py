@@ -181,7 +181,7 @@ class ModelShaving(Model):
         for i in self.ens['I']:
             for c in range(0, len(self.params['arrivee'])-1):
                 #print(c)
-                for t in range(self.params['arrivee'][i - 1][c]+1, self.params['depart'][i - 1][c]):
+                for t in range(self.params['arrivee'][i - 1][c]+1, self.params['depart'][i - 1][c]+1):
                     #print(t)
                     [self.add_constraint(self.SOC__n_i_t[n, i, t] ==
                                             self.SOC__n_i_t[n, i, t-1]
