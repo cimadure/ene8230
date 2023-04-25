@@ -85,13 +85,14 @@ class ModelShaving(Model):
 
         # TODO: WARNING: CHANGES (maybe use constains for ratio !), current value alway 0
         # self.Rborne__n_i = self.continuous_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
-        # self.Rborne__n_i = self.integer_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
+        self.Nborne__n_i = self.integer_var_matrix(self.ens['N'], self.ens['I'], name='Nborne__n_i_')
 
         #self.Rborne__n_i = 0.5 * np.ones(shape=(2, 4))
         #self.Rborne__n_i[0, 0] = .25
         #self.Rborne__n_i[1, 0] = .75
 
 #        self.Rborne__n_i = np.array([[504,	8,	152,	304],[168,	8,	152,	304]])
+
         self.Rborne__n_i = np.array([[32,	1,	10,	19],[11,	1,	10,	19]])
 
         #print(self.Rborne__n_i)
@@ -132,7 +133,9 @@ class ModelShaving(Model):
                                                    lb=-self.params['MAX_OPTIM'],
                                                    ub=self.params['MAX_OPTIM'], name='Pess__t_')
 
-
+        self.Pabs__n_i_t = self.continuous_var_cube(keys1=self.ens['N'], keys2=self.ens['I'], keys3=self.ens['T'], lb=0,
+                                                   ub=self.params['MAX_OPTIM'],
+                                                   name='Pabs__n_i_t_')
     def problem_constraint_prevent_simultaneous_charge_and_discharge_i_t(self):
         # CECI EST UNE NOUVELLE VERSION QUI IMPLIQUE QUE Si[n] soit activé
         # Si Si alors soit ch ou dech
