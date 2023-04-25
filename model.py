@@ -156,23 +156,6 @@ class ModelShaving(Model):
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
 
-    # validé
-    def problem_constraint_Pch_range(self):
-        return [
-            self.add_range(lb=self.params['Pch_min'],
-                           expr=self.Pch__n_i_t[n, i, t],
-                           ub=self.params['Pch_max_n'][n - 1]
-                           )
-            for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
-
-    # validé
-    def problem_constraint_Pdis_range(self):
-        return [self.add_range(lb=self.params['Pch_min'],
-                               expr=self.Pdis__n_i_t[n, i, t],
-                               ub=self.params['Pdis_max_n'][n - 1]
-                 )
-                for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
-
     def problem_constraint_SOC__n_i_t(self):
         # TODO: WARNING: self.delta_ch__i_t[i, t] , self.delta_dis__i_t[i, t] removed
         # Mod avec Pr__n_i_t
@@ -384,8 +367,8 @@ class ModelShaving(Model):
 
     def problem_constraint_Pr_t__max__m(self):
         for m in self.ens['M']:
-            mini = self.params['t_min__m'][m - 1]
-            maxi = self.params['t_max__m'][m - 1]
+            mini = self.params['t_min__m'][m - 0]
+            maxi = self.params['t_max__m'][m - 0]
 
             maxi = maxi - mini + 1
             mini = 0
@@ -394,8 +377,8 @@ class ModelShaving(Model):
 
     def problem_constraint_Pr_t__threshold__m(self):
         for m in self.ens['M']:
-            mini = self.params['t_min__m'][m - 1]
-            maxi = self.params['t_max__m'][m - 1]
+            mini = self.params['t_min__m'][m - 0]
+            maxi = self.params['t_max__m'][m - 0]
 
             maxi = maxi - mini + 1
             mini = 0
