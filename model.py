@@ -156,12 +156,6 @@ class ModelShaving(Model):
                 for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
 
 
-    def problem_constraint_SOC_range_v3(self):
-        pass
-        #        for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
-
-
-
     # validé
     def problem_constraint_Pch_range(self):
         return [
@@ -236,11 +230,11 @@ class ModelShaving(Model):
         for i in self.ens['I']:
             for c in range(0, len(self.params['arrivee'])-1):
                 #print(c)
-                for t in range(self.params['arrivee'][i - 1][c]+1, self.params['depart'][i - 1][c]-1):
+                for t in range(self.params['arrivee'][i - 1][c]+1, self.params['depart'][i - 1][c]):
                     #print(t)
                     [self.add_constraint(self.SOC__n_i_t[n, i, t] ==
                                             self.SOC__n_i_t[n, i, t-1]
-                                            -
+                                            +
                                             (
                                               self.params['beta_ch'] * self.Pess__n_i_t[n, i, t] * self.params['delta_t']
                                             )
@@ -318,12 +312,12 @@ class ModelShaving(Model):
         # Error: Model has non-convex quadratic constraint, index=0
     #5.1
     def problem_constraint_Pr__t_v3(self):
-        return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] - self.Pess__t[t])
+        return [self.add_constraint(self.Pr__t[t] == self.params['Pb'][t] + self.Pess__t[t])
                             for t in self.ens['T']
                 ]
 
     def problem_constraint_Pess__t_v3(self):
-        [self.add_constraint(self.Pess__t[t] == self.problem_power_aggration_only_Si__t(t=t,
+        [self.add_constraint(self.Pess__t[t] == self.problem_power_aggration_only_sum__t(t=t,
         s_i = self.params['Si'],
         #delta_i_t = self.delta_ch__i_t,
         p__n_i_t = self.Pess__n_i_t,
@@ -364,24 +358,12 @@ class ModelShaving(Model):
                     self.add_constraint(x[n, i, t] - x[n, i, t - 1] <= PU)
                     self.add_constraint(x[n, i, t - 1] - x[n, i, t] <= PD)
 
-    def problem_constraint_SOC__n_i_t_arrivee_depart(self):
-        x = self.SOC__n_i_t
-        for n in self.ens['N']:
-            for i in self.ens['I']:
-                for (ta, td) in zip(self.params['arrivee'][i - 1], self.params['depart'][i - 1]):
-                    self.add_constraint(x[n, i, ta] == self.params['SOCmin'])
-                    #self.add_constraint(x[n, i, ta+1] <= 0.8*self.params['SOCmax'])
-                    #self.add_constraint(x[n, i, ta] == self.params['SOCmax'])
-                    self.add_constraint(x[n, i, td] == self.params['SOCmax'])
-
-                    #self.add_constraint(x[n, i, ta] == self.params['SOCmax'])
-                    #self.add_constraint(x[n, i, td] == self.params['SOCmax'])
 
     def problem_constraint_SOC__n_i_t_arrivee(self):
         x = self.SOC__n_i_t
         for n in self.ens['N']:
             for i in self.ens['I']:
-                [self.add_constraint(x[n, i,t] == self.params['SOCmin'],
+                [self.add_constraint(x[n, i,t] == self.params['SOCmin']*1.2,
                                      ctname='ctr_SOC_n_i_t_arrivee_{n}_{i}_{t}'.format(n=i, i=i,t=t))
                  for t in self.params['arrivee'][i - 1]]
 
@@ -389,16 +371,16 @@ class ModelShaving(Model):
         x = self.SOC__n_i_t
         for n in self.ens['N']:
             for i in self.ens['I']:
-                [self.add_constraint(x[n, i, t] == self.params['SOCmax']) for t in self.params['depart'][i - 1]]
+                [self.add_constraint(x[n, i, t] >= self.params['SOCmax']) for t in self.params['depart'][i - 1]]
 
     def problem_constraint_SOC__n_i_t_latch_on(self):
-        W = 1
+        W = 3
         y = self.params['Si']
-        s = self.con__n_i_t
+        s = self.delta_ch__i_t
         for n in self.ens['N']:
             for i in self.ens['I']:
                 self.add_constraints(
-                    [self.sum(s[n, i, t - min((t + 1, W)) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
+                    [self.sum(s[n, i, t - self.min(t + 1, W) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
 
     def problem_constraint_Pr_t__max__m(self):
         for m in self.ens['M']:
