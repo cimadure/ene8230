@@ -359,13 +359,18 @@ class ModelShaving(Model):
             maxi = self.params['t_max__m'][m]
             e = maxi - mini + 1
             s = 0
-            #[self.add_constraint(self.Pr_t_max__m >= self.Pr__t[t]) for t in range(s, e)]
 
+            [self.add_constraint(self.Pr_max__m[m] == self.max(self.Pr__t[t] for t in range(s, e) ))]
 
+            [self.add_constraint(self.Pess_max__m[m] == self.max(self.Pess__t[t] for t in range(s, e) ))]
 
+            [self.add_constraint(self.E__m[m] == self.params['delta_t'] * self.sum(self.Pr__t[t] for t in range(s, e) ))]
 
-
-
+            [self.add_constraint(self.cout_infra_m[m] ==
+                                 sum(
+                                     sum(self.params['C__b_n'][n - 1, i - 1] *
+                                         self.Rborne__n_i[n - 1, i - 1] for n in self.ens['N'])
+                                        for i in self.ens['I']) * sum(self.params['delta_t'] for t in range(s, e)))]
 
 
 
