@@ -87,13 +87,13 @@ class ModelShaving(Model):
         # self.Rborne__n_i = self.continuous_var_matrix(self.ens['N'], self.ens['I'], name='Rborne_')
         self.Nborne__n_i = self.integer_var_matrix(self.ens['N'], self.ens['I'], name='Nborne__n_i_')
 
-        #self.Rborne__n_i = 0.5 * np.ones(shape=(2, 4))
-        #self.Rborne__n_i[0, 0] = .25
-        #self.Rborne__n_i[1, 0] = .75
 
 #        self.Rborne__n_i = np.array([[504,	8,	152,	304],[168,	8,	152,	304]])
+#        self.Rborne__n_i = np.array([[32,	1,	10,	19],[11,	1,	10,	19]])
 
-        self.Rborne__n_i = np.array([[32,	1,	10,	19],[11,	1,	10,	19]])
+        self.Rborne__n_i = np.array([[34,	1,	16,	31], [34,	1,	16,	31]]) # 50% 50%
+        #self.Rborne__n_i = np.array([[0,	0,	0,	0], [68, 2, 31, 61]]) #100%  0%
+        #self.Rborne__n_i = np.array([[68, 2, 31, 61], [0,	0,	0,	0]]) #100%  0%
 
         #print(self.Rborne__n_i)
 
@@ -118,6 +118,12 @@ class ModelShaving(Model):
         self.Pr__t = self.continuous_var_list(keys=self.ens['T'], lb=0, ub=self.params['MAX_OPTIM'], name='Pr_')
 
         self.Pr_t_max__m = self.continuous_var(lb=0, ub=self.params['MAX_OPTIM'], name='Pr_t_max__m')
+
+        self.Pr_max__m = self.continuous_var_list(keys=self.ens['M'], lb=0, ub=self.params['MAX_OPTIM'], name='Pr_max__m')
+        self.Pess_max__m = self.continuous_var_list(keys=self.ens['M'], lb=0, ub=self.params['MAX_OPTIM'], name='Pess_max__m')
+        self.E__m = self.continuous_var_list(keys=self.ens['M'], lb=0, ub=self.params['MAX_OPTIM'], name='E__m')
+        self.cout_infra_m = self.continuous_var_list(keys=self.ens['M'], lb=0, ub=self.params['MAX_OPTIM'], name='cout_infra_m')
+
 
         self.delta_soc_direction = self.binary_var_list(keys=self.ens['T'], name='delta_soc_dir_')
 
@@ -286,7 +292,6 @@ class ModelShaving(Model):
             for i in self.ens['I']) *  sum(self.params['delta_t'] for t in self.ens['T'])
 
 
-
     def problem_constraint_SOC__n_i_t_arrivee(self):
         x = self.SOC__n_i_t
         for n in self.ens['N']:
@@ -322,16 +327,46 @@ class ModelShaving(Model):
             print(m, mini, maxi)
             [self.add_constraint(self.Pr_t_max__m >= self.params['P_souscrite']) for t in range(mini, maxi)]
 
-
     def problem_constraints(self):
-        #self.problem_constraint_SOC_range()
-        self.problem_constraint_Pch_range()
-        self.problem_constraint_Pdis_range()
+
+        self.cout_energie = self.problem_cout_energie()
+        self.cout_puissance = self.problem_cout_puissance()
+        self.cout_infrastructure = self.problem_cout_infrastructure()
+        f_objective = self.cout_energie + self.cout_puissance + self.cout_infrastructure
+        self.minimize(f_objective)
+        # TODO: mettre les problem_cout_... en vecteurs/retirer la dernière somme pour avoir min et max
+        self.add_kpi(self.cout_energie, "Cout Energie ($)")
+        self.add_kpi(self.cout_puissance, "Cout Puissance ($)")
+        self.add_kpi(self.cout_infrastructure, "Cout infrastructure ($)")
+        self.add_kpi(self.max(self.params['Pb_max__m']), "max Puissance Pb_max[m] clipped (kW)")
+        self.add_kpi(self.max(self.Pr__t), "max Puissance Preseau clipped (kW)")
+
+        self.problem_constraint_SOC__v3_n_i_t()
+        self.problem_constraint_SOC__n_i_t_arrivee()
+        self.problem_constraint_SOC__n_i_t_depart()
+
+        self.problem_constraint_Pr__t_v3()
+        self.problem_constraint_Pr_t__max__m()
+        self.problem_constraint_Pr_t__threshold__m()
+
+        self.problem_constraint_Pess__t_v3()
+        self.problem_constraint_Pess_range_v3()
+        [self.add_constraint(self.Pess__n_i_t[n, i, t] * (1 - self.params['Si'][t - 0, i - 1]) == 0)
+         for n in self.ens['N'] for i in self.ens['I'] for t in self.ens['T']]
+
+        for m in self.ens['M']:
+            mini = self.params['t_min__m'][m]
+            maxi = self.params['t_max__m'][m]
+            e = maxi - mini + 1
+            s = 0
+            #[self.add_constraint(self.Pr_t_max__m >= self.Pr__t[t]) for t in range(s, e)]
 
 
-        # [self.add_constraint(self.sum(self.Pch__n_i_t[n, i, t] for n in self.ens['N'])
-        #                      * self.sum(self.Pdi__n_i_t[n, i, t] for n in self.ens['N']) == 0 for i in self.ens['I'])
-        #  for t in self.ens['T']]
+
+
+
+
+
 
 
     def problem_constraint_SOC__n_i_t_latch_on(self):
@@ -342,8 +377,6 @@ class ModelShaving(Model):
             for i in self.ens['I']:
                 self.add_constraints(
                     [self.sum(s[n, i, t - self.min(t + 1, W) + 1:t + 1]) <= y[t - 1, i - 1] for t in self.ens['T']])
-
-
 
     def problem_constraint_uc_soc_ramp_up_and_soc_ramp_down(self):
         PU = self.params['SOCmin'] / self.params['delta_t']
