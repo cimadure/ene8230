@@ -282,7 +282,8 @@ class ModelShaving(Model):
 
     def problem_cout_puissance(self):
         # ∑_(m=1)^12▒(C_P^ *(P_m^max+)
-        return self.sum(self.params['C__P'] * self.Pr_t_max__m for m in self.ens['M'])
+#        return self.sum(self.params['C__P'] * self.Pr_t_max__m for m in self.ens['M'])
+        return self.sum(self.params['C__P'] * self.Pr_max__m[m] for m in self.ens['M'])
 
     def problem_cout_infrastructure(self):
         # ∑_(i=1) ^ I▒(∑_(n=1) ^ 2▒(C_(b, n) * N_EVs * R_(ut, i) * R_(borne, ni)) )
@@ -316,6 +317,7 @@ class ModelShaving(Model):
             mini = 0
             print(m, mini, maxi)
             [self.add_constraint(self.Pr_t_max__m >= self.Pr__t[t]) for t in range(mini, maxi)]
+#            [self.add_constraint(self.Pr_max__m[m] >= self.Pr__t[t]) for t in range(mini, maxi)]
 
     def problem_constraint_Pr_t__threshold__m(self):
         for m in self.ens['M']:
@@ -326,6 +328,7 @@ class ModelShaving(Model):
             mini = 0
             print(m, mini, maxi)
             [self.add_constraint(self.Pr_t_max__m >= self.params['P_souscrite']) for t in range(mini, maxi)]
+#            [self.add_constraint(self.Pr_max__m[m] >= self.params['P_souscrite']) for t in range(mini, maxi)]
 
     def problem_constraints(self):
 
